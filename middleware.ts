@@ -71,8 +71,18 @@ export const config = {
      * - favicon.ico (favicon file)
      * - api/twilio (Twilio webhooks - must be public)
      * - public folder
+     * 
+     * Note: The negative lookahead (?!...) excludes paths that start with these patterns
      */
-    '/((?!_next/static|_next/image|favicon.ico|api/twilio|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    {
+      /*
+       * Exclude:
+       * - Static files and images
+       * - All /api/twilio/* routes (webhooks must be public)
+       * - Image files
+       */
+      source: '/((?!_next/static|_next/image|favicon\\.ico|api/twilio|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    },
   ],
 };
 
