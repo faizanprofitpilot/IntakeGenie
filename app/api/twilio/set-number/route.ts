@@ -35,18 +35,20 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient();
 
     // Verify firm exists
-    const { data: firm, error: firmError } = await supabase
+    const { data: firmData, error: firmError } = await supabase
       .from('firms')
       .select('id, owner_user_id, twilio_number')
       .eq('id', firmId)
       .single();
 
-    if (firmError || !firm) {
+    if (firmError || !firmData) {
       return NextResponse.json(
         { error: 'Firm not found' },
         { status: 404 }
       );
     }
+
+    const firm = firmData as any;
 
     // Initialize Twilio client
     const twilioClient = twilio(accountSid, authToken);
