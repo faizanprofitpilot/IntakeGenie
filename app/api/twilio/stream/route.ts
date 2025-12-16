@@ -25,42 +25,34 @@ export async function OPTIONS() {
 async function generateGreeting(response: twiml.VoiceResponse, callSid: string | null) {
   const greetingText = "Hi. Thanks for calling IntakeGenie. I'm an automated assistant for the firm. I can't give legal advice. But I can collect your information so the firm can follow up. Are you in a safe place to talk right now?";
   
-  // For now, use Twilio TTS to avoid Content-Type issues
-  // Premium TTS can be enabled after audio endpoint is fully tested
-  response.say({ voice: 'alice' }, greetingText);
-  
-  // TODO: Re-enable premium TTS after fixing audio endpoint
-  // try {
-  //   const { playUrl, fallbackText } = await getTTSAudioUrl(greetingText, callSid || 'unknown', 'greeting');
-  //   if (playUrl) {
-  //     response.play(playUrl);
-  //   } else {
-  //     response.say({ voice: 'alice' }, fallbackText);
-  //   }
-  // } catch (error) {
-  //   console.error('[Stream] TTS error, using fallback:', error);
-  //   response.say({ voice: 'alice' }, greetingText);
-  // }
+  try {
+    const { playUrl, fallbackText } = await getTTSAudioUrl(greetingText, callSid || 'unknown', 'greeting');
+    if (playUrl) {
+      response.play(playUrl);
+    } else {
+      // Fallback to Twilio TTS
+      response.say({ voice: 'alice' }, fallbackText);
+    }
+  } catch (error) {
+    console.error('[Stream] TTS error, using fallback:', error);
+    response.say({ voice: 'alice' }, greetingText);
+  }
 }
 
 // Helper function to generate no-input message with premium TTS
 async function generateNoInput(response: twiml.VoiceResponse, callSid: string | null) {
   const noInputText = "I didn't hear anything. Please call back when you're ready.";
-  // For now, use Twilio TTS to avoid Content-Type issues
-  response.say({ voice: 'alice' }, noInputText);
-  
-  // TODO: Re-enable premium TTS after fixing audio endpoint
-  // try {
-  //   const { playUrl, fallbackText } = await getTTSAudioUrl(noInputText, callSid || 'unknown', 'no-input');
-  //   if (playUrl) {
-  //     response.play(playUrl);
-  //   } else {
-  //     response.say({ voice: 'alice' }, fallbackText);
-  //   }
-  // } catch (error) {
-  //   console.error('[Stream] TTS error, using fallback:', error);
-  //   response.say({ voice: 'alice' }, noInputText);
-  // }
+  try {
+    const { playUrl, fallbackText } = await getTTSAudioUrl(noInputText, callSid || 'unknown', 'no-input');
+    if (playUrl) {
+      response.play(playUrl);
+    } else {
+      response.say({ voice: 'alice' }, fallbackText);
+    }
+  } catch (error) {
+    console.error('[Stream] TTS error, using fallback:', error);
+    response.say({ voice: 'alice' }, noInputText);
+  }
 }
 
 // Twilio's <Redirect> defaults to POST, so we must support POST

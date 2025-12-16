@@ -51,10 +51,9 @@ export async function generateTTS(text: string): Promise<Buffer> {
       throw new Error('DEEPGRAM_API_KEY not configured');
     }
 
-    // Deepgram TTS API returns MP3 by default
-    // Request WAV format explicitly for better Twilio compatibility
-    // Format: encoding=linear16 (PCM), container=wav, sample_rate=24000 (Twilio standard)
-    const response = await fetch('https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=linear16&container=wav&sample_rate=24000', {
+    // Use MP3 - Twilio's most reliable format
+    // MP3 is safer than WAV for telephony (no encoding/sample rate issues)
+    const response = await fetch('https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=mp3', {
       method: 'POST',
       headers: {
         'Authorization': `Token ${apiKey}`,
@@ -70,7 +69,7 @@ export async function generateTTS(text: string): Promise<Buffer> {
       throw new Error(`Deepgram TTS failed: ${response.status} ${errorText}`);
     }
 
-    // Deepgram returns the format we requested (WAV)
+    // Deepgram returns MP3
     const audioArrayBuffer = await response.arrayBuffer();
     return Buffer.from(audioArrayBuffer);
   } catch (error) {

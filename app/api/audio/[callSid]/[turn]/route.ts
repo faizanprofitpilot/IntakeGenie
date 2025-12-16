@@ -57,15 +57,15 @@ export async function GET(
       }
     }
 
-    // Return audio - use audio/x-wav for better Twilio compatibility
+    // Return audio as MP3 - Twilio's most reliable format
     // Convert Buffer to Uint8Array for NextResponse
     return new NextResponse(new Uint8Array(audioBuffer), {
       status: 200,
       headers: {
-        'Content-Type': 'audio/x-wav', // Twilio prefers audio/x-wav over audio/wav
+        'Content-Type': 'audio/mpeg', // MP3 - Twilio's preferred format
+        'Content-Length': audioBuffer.length.toString(),
         'Cache-Control': 'public, max-age=31536000, immutable',
         'Access-Control-Allow-Origin': '*',
-        'Content-Length': audioBuffer.length.toString(),
       },
     });
   } catch (error) {
