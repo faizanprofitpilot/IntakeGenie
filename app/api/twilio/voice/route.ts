@@ -126,19 +126,11 @@ export async function POST(request: NextRequest) {
       dial.number(firm.forward_to_number);
     } else {
       // Closed and no after-hours mode - hang up
-      // Use premium TTS for this message
-      const closedText = 'Our office is currently closed. Please call back during business hours.';
-      try {
-        const { playUrl, fallbackText } = await getTTSAudioUrl(closedText, callSid, 'closed');
-        if (playUrl) {
-          response.play(playUrl);
-        } else {
-          response.say({ voice: 'alice' }, fallbackText);
-        }
-      } catch (error) {
-        console.error('[Voice] TTS error, using fallback:', error);
-        response.say({ voice: 'alice' }, closedText);
-      }
+      // Temporarily using Twilio TTS until audio endpoint redirect is fixed
+      response.say(
+        { voice: 'alice' },
+        'Our office is currently closed. Please call back during business hours.'
+      );
       response.hangup();
     }
 
