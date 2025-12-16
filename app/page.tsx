@@ -1,17 +1,51 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 
 function LandingPageContent() {
+  const [isVisible, setIsVisible] = useState<Record<string, boolean>>({});
+  const sectionsRef = useRef<Record<string, HTMLElement | null>>({});
+
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+
+    // Create intersection observers for each section
+    Object.keys(sectionsRef.current).forEach((key) => {
+      const element = sectionsRef.current[key];
+      if (!element) return;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setIsVisible((prev) => ({ ...prev, [key]: true }));
+            }
+          });
+        },
+        { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+      );
+
+      observer.observe(element);
+      observers.push(observer);
+    });
+
+    return () => {
+      observers.forEach((observer) => observer.disconnect());
+    };
+  }, []);
+
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom right, #F5F7FA, #ffffff, #F5F7FA)' }}>
       {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-50" style={{ borderColor: '#4A5D73' }}>
+      <nav 
+        className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-50 transition-all duration-300"
+        style={{ borderColor: '#4A5D73' }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Link href="/">
+              <Link href="/" className="transition-transform duration-300 hover:scale-105">
                 <img 
                   src="/full-logo.png" 
                   alt="IntakeGenie" 
@@ -23,21 +57,21 @@ function LandingPageContent() {
               <nav className="hidden md:flex items-center space-x-6">
                 <a
                   href="#features"
-                  className="text-sm font-medium transition-colors hover:[color:#0B1F3B] cursor-pointer"
+                  className="text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
                   style={{ color: '#4A5D73' }}
                 >
                   Features
                 </a>
                 <a
                   href="#how-it-works"
-                  className="text-sm font-medium transition-colors hover:[color:#0B1F3B] cursor-pointer"
+                  className="text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
                   style={{ color: '#4A5D73' }}
                 >
                   How It Works
                 </a>
                 <a
                   href="#pricing"
-                  className="text-sm font-medium transition-colors hover:[color:#0B1F3B] cursor-pointer"
+                  className="text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
                   style={{ color: '#4A5D73' }}
                 >
                   Pricing
@@ -45,14 +79,14 @@ function LandingPageContent() {
               </nav>
               <Link
                 href="/login"
-                className="px-3 py-2 rounded-md text-sm font-medium transition-colors hover:[color:#0B1F3B] cursor-pointer"
+                className="px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
                 style={{ color: '#4A5D73' }}
               >
                 Sign In
               </Link>
               <Link
                 href="/login"
-                className="px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm text-white hover:[background-color:#0A1A33] cursor-pointer"
+                className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 shadow-sm text-white hover:[background-color:#0A1A33] hover:scale-105 hover:shadow-lg cursor-pointer"
                 style={{ backgroundColor: '#0B1F3B' }}
               >
                 Get Started
@@ -64,31 +98,63 @@ function LandingPageContent() {
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 overflow-visible">
-        <div className="text-center overflow-visible">
-          <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-[1.1] py-2" style={{ color: '#0B1F3B' }}>
+        <div 
+          className="text-center overflow-visible animate-fade-in-up"
+          ref={(el) => { sectionsRef.current['hero'] = el; }}
+        >
+          <h1 
+            className={`text-5xl md:text-6xl font-extrabold mb-6 leading-[1.1] py-2 transition-all duration-1000 ${
+              isVisible['hero'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+            style={{ color: '#0B1F3B' }}
+          >
             Never Miss a{' '}
-            <span className="block leading-[1.1] py-1 mt-2" style={{ background: 'linear-gradient(to right, #0B1F3B, #C9A24D)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', display: 'inline-block' }}>
+            <span 
+              className="block leading-[1.1] py-1 mt-2 animate-gradient bg-gradient-to-r from-[#0B1F3B] via-[#4A5D73] to-[#C9A24D] bg-clip-text text-transparent bg-[length:200%_auto]"
+              style={{ 
+                background: 'linear-gradient(to right, #0B1F3B, #C9A24D)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                display: 'inline-block',
+                animation: 'gradient-shift 3s ease infinite'
+              }}
+            >
               Legal Lead Again
             </span>
           </h1>
-          <p className="text-xl mb-8 max-w-3xl mx-auto" style={{ color: '#4A5D73' }}>
+          <p 
+            className={`text-xl mb-8 max-w-3xl mx-auto transition-all duration-1000 delay-200 ${
+              isVisible['hero'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+            style={{ color: '#4A5D73' }}
+          >
             AI-powered voice agent that captures intake information when your firm is busy or closed.
             Get structured summaries delivered to your inbox instantly.
           </p>
-          <p className="text-sm mb-8 max-w-2xl mx-auto" style={{ color: '#4A5D73' }}>
+          <p 
+            className={`text-sm mb-8 max-w-2xl mx-auto transition-all duration-1000 delay-300 ${
+              isVisible['hero'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+            style={{ color: '#4A5D73' }}
+          >
             No credit card required • Set up in 10 minutes • Cancel anytime
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div 
+            className={`flex flex-col sm:flex-row gap-4 justify-center transition-all duration-1000 delay-400 ${
+              isVisible['hero'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+          >
             <Link
               href="/login"
-              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-white hover:[background-color:#0A1A33] cursor-pointer"
+              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-1 text-white hover:[background-color:#0A1A33] cursor-pointer"
               style={{ backgroundColor: '#0B1F3B' }}
             >
               Start Free Trial - No Credit Card
             </Link>
             <Link
               href="#features"
-              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all shadow-lg border-2 bg-white hover:[background-color:#F5F7FA] cursor-pointer"
+              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg border-2 bg-white hover:[background-color:#F5F7FA] hover:scale-105 transform hover:-translate-y-1 cursor-pointer"
               style={{ color: '#0B1F3B', borderColor: '#0B1F3B' }}
             >
               See How It Works
@@ -97,12 +163,16 @@ function LandingPageContent() {
         </div>
 
         {/* Hero Image/Illustration */}
-        <div className="mt-16 flex justify-center">
+        <div 
+          className={`mt-16 flex justify-center transition-all duration-1000 delay-500 ${
+            isVisible['hero'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+          }`}
+        >
           <div className="relative w-full max-w-4xl">
-            <div className="rounded-2xl p-8 shadow-2xl" style={{ background: 'linear-gradient(to right, rgba(11, 31, 59, 0.1), rgba(201, 162, 77, 0.1))' }}>
+            <div className="rounded-2xl p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.02]" style={{ background: 'linear-gradient(to right, rgba(11, 31, 59, 0.1), rgba(201, 162, 77, 0.1))' }}>
               <div className="bg-white rounded-lg p-6 shadow-lg">
                 <div className="flex items-center space-x-4 mb-4">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#0B1F3B' }}>
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center animate-pulse" style={{ backgroundColor: '#0B1F3B' }}>
                     <svg
                       className="w-6 h-6 text-white"
                       fill="none"
@@ -118,14 +188,14 @@ function LandingPageContent() {
                     </svg>
                   </div>
                   <div>
-                    <div className="h-4 bg-gray-200 rounded w-32 mb-2"></div>
-                    <div className="h-3 bg-gray-100 rounded w-24"></div>
+                    <div className="h-4 bg-gray-200 rounded w-32 mb-2 animate-pulse"></div>
+                    <div className="h-3 bg-gray-100 rounded w-24 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <div className="h-4 rounded w-full" style={{ backgroundColor: 'rgba(11, 31, 59, 0.1)' }}></div>
-                  <div className="h-4 rounded w-3/4" style={{ backgroundColor: 'rgba(11, 31, 59, 0.1)' }}></div>
-                  <div className="h-4 rounded w-5/6" style={{ backgroundColor: 'rgba(201, 162, 77, 0.1)' }}></div>
+                  <div className="h-4 rounded w-full animate-pulse" style={{ backgroundColor: 'rgba(11, 31, 59, 0.1)', animationDelay: '0.1s' }}></div>
+                  <div className="h-4 rounded w-3/4 animate-pulse" style={{ backgroundColor: 'rgba(11, 31, 59, 0.1)', animationDelay: '0.2s' }}></div>
+                  <div className="h-4 rounded w-5/6 animate-pulse" style={{ backgroundColor: 'rgba(201, 162, 77, 0.1)', animationDelay: '0.3s' }}></div>
                 </div>
               </div>
             </div>
@@ -134,8 +204,16 @@ function LandingPageContent() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center mb-16">
+      <section 
+        id="features" 
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20"
+        ref={(el) => { sectionsRef.current['features'] = el; }}
+      >
+        <div 
+          className={`text-center mb-16 transition-all duration-1000 ${
+            isVisible['features'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}
+        >
           <h2 className="text-4xl font-bold mb-4" style={{ color: '#0B1F3B' }}>Turn Missed Calls Into Clients</h2>
           <p className="text-xl max-w-2xl mx-auto" style={{ color: '#4A5D73' }}>
             Capture leads 24/7 with intelligent routing and automated intake collection. Every call becomes an opportunity.
@@ -143,168 +221,111 @@ function LandingPageContent() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Feature 1 */}
-          <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(11, 31, 59, 0.1)' }}>
-              <svg
-                className="w-6 h-6"
-                style={{ color: '#0B1F3B' }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          {[
+            {
+              icon: (
+                <svg className="w-6 h-6" style={{ color: '#0B1F3B' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ),
+              title: '24/7 Availability',
+              description: 'Never miss a call. Our AI agent handles after-hours and no-answer scenarios automatically, ensuring every lead is captured.',
+              bgColor: 'rgba(11, 31, 59, 0.1)',
+              delay: 0
+            },
+            {
+              icon: (
+                <svg className="w-6 h-6" style={{ color: '#C9A24D' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              ),
+              title: 'Structured Intake',
+              description: 'Collects all essential information: contact details, incident information, injuries, treatment status, and more in a structured format.',
+              bgColor: 'rgba(201, 162, 77, 0.1)',
+              delay: 100
+            },
+            {
+              icon: (
+                <svg className="w-6 h-6" style={{ color: '#0B1F3B' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              ),
+              title: 'Instant Summaries',
+              description: 'Receive beautifully formatted email summaries with transcripts, recordings, and actionable insights within minutes of each call.',
+              bgColor: 'rgba(11, 31, 59, 0.1)',
+              delay: 200
+            },
+            {
+              icon: (
+                <svg className="w-6 h-6" style={{ color: '#C9A24D' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              ),
+              title: 'Emergency Detection',
+              description: 'Automatically detects emergencies and directs callers to 911, while flagging urgent cases for immediate attention.',
+              bgColor: 'rgba(201, 162, 77, 0.1)',
+              delay: 300
+            },
+            {
+              icon: (
+                <svg className="w-6 h-6" style={{ color: '#0B1F3B' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              ),
+              title: 'Easy Configuration',
+              description: 'Set up business hours, routing preferences, and notification emails in minutes. No technical expertise required.',
+              bgColor: 'rgba(11, 31, 59, 0.1)',
+              delay: 400
+            },
+            {
+              icon: (
+                <svg className="w-6 h-6" style={{ color: '#C9A24D' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              ),
+              title: 'Call Analytics',
+              description: 'Track all calls with detailed logs, transcripts, and recordings. Filter by status, urgency, and date for easy management.',
+              bgColor: 'rgba(201, 162, 77, 0.1)',
+              delay: 500
+            }
+          ].map((feature, index) => (
+            <div
+              key={index}
+              className={`bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 ${
+                isVisible['features'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+              }`}
+              style={{ 
+                transitionDelay: `${feature.delay}ms`,
+                animation: isVisible['features'] ? `fadeInUp 0.6s ease-out ${feature.delay}ms both` : 'none'
+              }}
+            >
+              <div 
+                className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 transition-transform duration-300 hover:rotate-6 hover:scale-110"
+                style={{ backgroundColor: feature.bgColor }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+                {feature.icon}
+              </div>
+              <h3 className="text-xl font-semibold mb-2" style={{ color: '#0B1F3B' }}>{feature.title}</h3>
+              <p style={{ color: '#4A5D73' }}>{feature.description}</p>
             </div>
-            <h3 className="text-xl font-semibold mb-2" style={{ color: '#0B1F3B' }}>24/7 Availability</h3>
-            <p style={{ color: '#4A5D73' }}>
-              Never miss a call. Our AI agent handles after-hours and no-answer scenarios
-              automatically, ensuring every lead is captured.
-            </p>
-          </div>
-
-          {/* Feature 2 */}
-          <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(201, 162, 77, 0.1)' }}>
-              <svg
-                className="w-6 h-6"
-                style={{ color: '#C9A24D' }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2" style={{ color: '#0B1F3B' }}>Structured Intake</h3>
-            <p style={{ color: '#4A5D73' }}>
-              Collects all essential information: contact details, incident information, injuries,
-              treatment status, and more in a structured format.
-            </p>
-          </div>
-
-          {/* Feature 3 */}
-          <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(11, 31, 59, 0.1)' }}>
-              <svg
-                className="w-6 h-6"
-                style={{ color: '#0B1F3B' }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2" style={{ color: '#0B1F3B' }}>Instant Summaries</h3>
-            <p style={{ color: '#4A5D73' }}>
-              Receive beautifully formatted email summaries with transcripts, recordings, and
-              actionable insights within minutes of each call.
-            </p>
-          </div>
-
-          {/* Feature 4 */}
-          <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(201, 162, 77, 0.1)' }}>
-              <svg
-                className="w-6 h-6"
-                style={{ color: '#C9A24D' }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2" style={{ color: '#0B1F3B' }}>Emergency Detection</h3>
-            <p style={{ color: '#4A5D73' }}>
-              Automatically detects emergencies and directs callers to 911, while flagging urgent
-              cases for immediate attention.
-            </p>
-          </div>
-
-          {/* Feature 5 */}
-          <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(11, 31, 59, 0.1)' }}>
-              <svg
-                className="w-6 h-6"
-                style={{ color: '#0B1F3B' }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2" style={{ color: '#0B1F3B' }}>Easy Configuration</h3>
-            <p style={{ color: '#4A5D73' }}>
-              Set up business hours, routing preferences, and notification emails in minutes. No
-              technical expertise required.
-            </p>
-          </div>
-
-          {/* Feature 6 */}
-          <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(201, 162, 77, 0.1)' }}>
-              <svg
-                className="w-6 h-6"
-                style={{ color: '#C9A24D' }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold mb-2" style={{ color: '#0B1F3B' }}>Call Analytics</h3>
-            <p style={{ color: '#4A5D73' }}>
-              Track all calls with detailed logs, transcripts, and recordings. Filter by status,
-              urgency, and date for easy management.
-            </p>
-          </div>
+          ))}
         </div>
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-20" style={{ backgroundColor: '#F5F7FA' }}>
+      <section 
+        id="how-it-works" 
+        className="py-20" 
+        style={{ backgroundColor: '#F5F7FA' }}
+        ref={(el) => { sectionsRef.current['how-it-works'] = el; }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div 
+            className={`text-center mb-16 transition-all duration-1000 ${
+              isVisible['how-it-works'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+          >
             <h2 className="text-4xl font-bold mb-4" style={{ color: '#0B1F3B' }}>How It Works</h2>
             <p className="text-xl max-w-2xl mx-auto mb-6" style={{ color: '#4A5D73' }}>
               Set up in minutes, start capturing leads today. No technical expertise required.
@@ -312,50 +333,41 @@ function LandingPageContent() {
           </div>
 
           <div className="grid md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4" style={{ backgroundColor: '#0B1F3B' }}>
-                1
+            {[
+              { num: '1', title: 'Call Comes In', desc: 'Caller dials your firm number during or after business hours' },
+              { num: '2', title: 'Smart Routing', desc: 'System routes to your team if available, or to AI agent if busy/closed' },
+              { num: '3', title: 'Intake Collection', desc: 'AI agent conducts professional intake conversation, collecting all essential details' },
+              { num: '4', title: 'Instant Delivery', desc: 'Receive formatted email with summary, transcript, and recording link' }
+            ].map((step, index) => (
+              <div
+                key={index}
+                className={`text-center transition-all duration-700 ${
+                  isVisible['how-it-works'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                }`}
+                style={{ 
+                  transitionDelay: `${index * 150}ms`,
+                  animation: isVisible['how-it-works'] ? `fadeInUp 0.6s ease-out ${index * 150}ms both` : 'none'
+                }}
+              >
+                <div 
+                  className="w-16 h-16 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4 transition-all duration-500 hover:scale-110 hover:rotate-6 hover:shadow-lg"
+                  style={{ backgroundColor: '#0B1F3B' }}
+                >
+                  {step.num}
+                </div>
+                <h3 className="text-lg font-semibold mb-2" style={{ color: '#0B1F3B' }}>{step.title}</h3>
+                <p style={{ color: '#4A5D73' }}>{step.desc}</p>
               </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: '#0B1F3B' }}>Call Comes In</h3>
-              <p style={{ color: '#4A5D73' }}>
-                Caller dials your firm number during or after business hours
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4" style={{ backgroundColor: '#0B1F3B' }}>
-                2
-              </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: '#0B1F3B' }}>Smart Routing</h3>
-              <p style={{ color: '#4A5D73' }}>
-                System routes to your team if available, or to AI agent if busy/closed
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4" style={{ backgroundColor: '#0B1F3B' }}>
-                3
-              </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: '#0B1F3B' }}>Intake Collection</h3>
-              <p style={{ color: '#4A5D73' }}>
-                AI agent conducts professional intake conversation, collecting all essential details
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4" style={{ backgroundColor: '#0B1F3B' }}>
-                4
-              </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: '#0B1F3B' }}>Instant Delivery</h3>
-              <p style={{ color: '#4A5D73' }}>
-                Receive formatted email with summary, transcript, and recording link
-              </p>
-            </div>
+            ))}
           </div>
-          <div className="text-center mt-12">
+          <div 
+            className={`text-center mt-12 transition-all duration-1000 delay-700 ${
+              isVisible['how-it-works'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+          >
             <Link
               href="/login"
-              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all shadow-lg inline-block text-white hover:[background-color:#0A1A33] cursor-pointer"
+              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block text-white hover:[background-color:#0A1A33] hover:scale-105 hover:shadow-xl cursor-pointer"
               style={{ backgroundColor: '#0B1F3B' }}
             >
               Get Started Now
@@ -365,9 +377,18 @@ function LandingPageContent() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20" style={{ backgroundColor: '#F5F7FA' }}>
+      <section 
+        id="pricing" 
+        className="py-20" 
+        style={{ backgroundColor: '#F5F7FA' }}
+        ref={(el) => { sectionsRef.current['pricing'] = el; }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div 
+            className={`text-center mb-16 transition-all duration-1000 ${
+              isVisible['pricing'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+          >
             <h2 className="text-4xl font-bold mb-4" style={{ color: '#0B1F3B' }}>Simple, Transparent Pricing</h2>
             <p className="text-xl max-w-2xl mx-auto" style={{ color: '#4A5D73' }}>
               Choose the plan that works best for your firm
@@ -375,181 +396,103 @@ function LandingPageContent() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Starter Plan */}
-            <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-              <div className="text-center">
-                <h3 className="text-2xl font-bold mb-2" style={{ color: '#0B1F3B' }}>Starter</h3>
-                <div className="mb-4">
-                  <span className="text-4xl font-extrabold" style={{ color: '#0B1F3B' }}>$99</span>
-                  <span className="text-lg" style={{ color: '#4A5D73' }}>/month</span>
+            {[
+              {
+                name: 'Starter',
+                price: '$99',
+                period: '/month',
+                desc: 'Perfect for small firms getting started',
+                features: ['Up to 100 calls/month', '24/7 AI agent', 'Email summaries', 'Call recordings'],
+                cta: 'Get Started',
+                featured: false
+              },
+              {
+                name: 'Professional',
+                price: '$299',
+                period: '/month',
+                desc: 'Ideal for growing law firms',
+                features: ['Up to 500 calls/month', '24/7 AI agent', 'Email summaries', 'Call recordings', 'Priority support', 'Advanced analytics'],
+                cta: 'Get Started',
+                featured: true
+              },
+              {
+                name: 'Enterprise',
+                price: 'Custom',
+                period: '',
+                desc: 'For large firms with high call volume',
+                features: ['Unlimited calls', '24/7 AI agent', 'Email summaries', 'Call recordings', 'Dedicated support', 'Custom integrations'],
+                cta: 'Contact Sales',
+                featured: false
+              }
+            ].map((plan, index) => (
+              <div
+                key={index}
+                className={`bg-white p-8 rounded-xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 relative ${
+                  plan.featured ? 'border-2' : ''
+                } ${
+                  isVisible['pricing'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                }`}
+                style={{ 
+                  borderColor: plan.featured ? '#C9A24D' : 'transparent',
+                  transitionDelay: `${index * 150}ms`,
+                  animation: isVisible['pricing'] ? `fadeInUp 0.6s ease-out ${index * 150}ms both` : 'none'
+                }}
+              >
+                {plan.featured && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 animate-bounce">
+                    <span className="bg-gradient-to-r from-[#0B1F3B] to-[#C9A24D] text-white px-4 py-1 rounded-full text-sm font-semibold">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold mb-2" style={{ color: '#0B1F3B' }}>{plan.name}</h3>
+                  <div className="mb-4">
+                    <span className="text-4xl font-extrabold" style={{ color: '#0B1F3B' }}>{plan.price}</span>
+                    <span className="text-lg" style={{ color: '#4A5D73' }}>{plan.period}</span>
+                  </div>
+                  <p className="text-sm mb-6" style={{ color: '#4A5D73' }}>{plan.desc}</p>
+                  <ul className="text-left space-y-3 mb-8">
+                    {plan.features.map((feature, fIndex) => (
+                      <li key={fIndex} className="flex items-start">
+                        <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0 transition-transform duration-300 hover:scale-125" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span style={{ color: '#4A5D73' }}>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/login"
+                    className={`block w-full px-6 py-3 rounded-lg text-center font-semibold transition-all duration-300 hover:scale-105 cursor-pointer ${
+                      plan.featured 
+                        ? 'text-white hover:[background-color:#0A1A33]' 
+                        : 'border-2 hover:[background-color:#F5F7FA]'
+                    }`}
+                    style={plan.featured ? { backgroundColor: '#0B1F3B' } : { color: '#0B1F3B', borderColor: '#0B1F3B' }}
+                  >
+                    {plan.cta}
+                  </Link>
                 </div>
-                <p className="text-sm mb-6" style={{ color: '#4A5D73' }}>
-                  Perfect for small firms getting started
-                </p>
-                <ul className="text-left space-y-3 mb-8">
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Up to 100 calls/month</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>24/7 AI agent</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Email summaries</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Call recordings</span>
-                  </li>
-                </ul>
-                <Link
-                  href="/login"
-                  className="block w-full px-6 py-3 rounded-lg text-center font-semibold transition-all border-2 hover:[background-color:#F5F7FA] cursor-pointer"
-                  style={{ color: '#0B1F3B', borderColor: '#0B1F3B' }}
-                >
-                  Get Started
-                </Link>
               </div>
-            </div>
-
-            {/* Professional Plan - Featured */}
-            <div className="bg-white p-8 rounded-xl shadow-xl hover:shadow-2xl transition-shadow border-2 relative" style={{ borderColor: '#C9A24D' }}>
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <span className="bg-gradient-to-r from-[#0B1F3B] to-[#C9A24D] text-white px-4 py-1 rounded-full text-sm font-semibold">
-                  Most Popular
-                </span>
-              </div>
-              <div className="text-center">
-                <h3 className="text-2xl font-bold mb-2" style={{ color: '#0B1F3B' }}>Professional</h3>
-                <div className="mb-4">
-                  <span className="text-4xl font-extrabold" style={{ color: '#0B1F3B' }}>$299</span>
-                  <span className="text-lg" style={{ color: '#4A5D73' }}>/month</span>
-                </div>
-                <p className="text-sm mb-6" style={{ color: '#4A5D73' }}>
-                  Ideal for growing law firms
-                </p>
-                <ul className="text-left space-y-3 mb-8">
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Up to 500 calls/month</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>24/7 AI agent</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Email summaries</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Call recordings</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Priority support</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Advanced analytics</span>
-                  </li>
-                </ul>
-                <Link
-                  href="/login"
-                  className="block w-full px-6 py-3 rounded-lg text-center font-semibold text-white transition-all hover:[background-color:#0A1A33] cursor-pointer"
-                  style={{ backgroundColor: '#0B1F3B' }}
-                >
-                  Get Started
-                </Link>
-              </div>
-            </div>
-
-            {/* Enterprise Plan */}
-            <div className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-              <div className="text-center">
-                <h3 className="text-2xl font-bold mb-2" style={{ color: '#0B1F3B' }}>Enterprise</h3>
-                <div className="mb-4">
-                  <span className="text-4xl font-extrabold" style={{ color: '#0B1F3B' }}>Custom</span>
-                </div>
-                <p className="text-sm mb-6" style={{ color: '#4A5D73' }}>
-                  For large firms with high call volume
-                </p>
-                <ul className="text-left space-y-3 mb-8">
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Unlimited calls</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>24/7 AI agent</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Email summaries</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Call recordings</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Dedicated support</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style={{ color: '#C9A24D' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span style={{ color: '#4A5D73' }}>Custom integrations</span>
-                  </li>
-                </ul>
-                <Link
-                  href="/login"
-                  className="block w-full px-6 py-3 rounded-lg text-center font-semibold transition-all border-2 hover:[background-color:#F5F7FA] cursor-pointer"
-                  style={{ color: '#0B1F3B', borderColor: '#0B1F3B' }}
-                >
-                  Contact Sales
-                </Link>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20" style={{ background: 'linear-gradient(to right, #0B1F3B, #1a2f4f)' }}>
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+      <section 
+        className="py-20 relative overflow-hidden" 
+        style={{ background: 'linear-gradient(to right, #0B1F3B, #1a2f4f)' }}
+        ref={(el) => { sectionsRef.current['cta'] = el; }}
+      >
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-72 h-72 bg-[#C9A24D] rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#C9A24D] rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        </div>
+        <div className={`max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8 relative z-10 transition-all duration-1000 ${
+          isVisible['cta'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        }`}>
           <h2 className="text-4xl font-bold text-white mb-4">Ready to Stop Losing Leads?</h2>
           <p className="text-xl mb-4" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
             Start capturing intake calls 24/7 with IntakeGenie. Set up takes less than 10 minutes.
@@ -559,7 +502,7 @@ function LandingPageContent() {
           </p>
           <Link
             href="/login"
-            className="px-8 py-4 rounded-lg text-lg font-semibold transition-all shadow-lg inline-block bg-white hover:bg-gray-100 cursor-pointer"
+            className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block bg-white hover:bg-gray-100 hover:scale-105 hover:shadow-xl cursor-pointer"
             style={{ color: '#0B1F3B' }}
           >
             Start Your Free Trial
@@ -574,20 +517,20 @@ function LandingPageContent() {
             <img 
               src="/full-logo.png" 
               alt="IntakeGenie" 
-              className="h-8 w-auto mx-auto mb-4"
+              className="h-8 w-auto mx-auto mb-4 transition-transform duration-300 hover:scale-110"
             />
             <p className="mb-4" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Never miss a legal lead again.</p>
             <div className="flex justify-center space-x-6">
               <Link 
                 href="/login" 
-                className="transition-colors hover:text-white" 
+                className="transition-all duration-300 hover:text-white hover:scale-110" 
                 style={{ color: 'rgba(255, 255, 255, 0.7)' }}
               >
                 Sign In
               </Link>
               <Link 
                 href="/login" 
-                className="transition-colors hover:text-white" 
+                className="transition-all duration-300 hover:text-white hover:scale-110" 
                 style={{ color: 'rgba(255, 255, 255, 0.7)' }}
               >
                 Get Started
@@ -597,6 +540,32 @@ function LandingPageContent() {
           </div>
         </div>
       </footer>
+
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes gradient-shift {
+          0%, 100% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+        }
+
+        .animate-fade-in-up {
+          animation: fadeInUp 0.8s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
@@ -606,7 +575,7 @@ export default function LandingPage() {
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, #F5F7FA, #ffffff, #F5F7FA)' }}>
         <div className="text-center">
-          <div className="text-2xl font-bold mb-2" style={{ color: '#0B1F3B' }}>Loading...</div>
+          <div className="text-2xl font-bold mb-2 animate-pulse" style={{ color: '#0B1F3B' }}>Loading...</div>
         </div>
       </div>
     }>
