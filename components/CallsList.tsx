@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Call, CallStatus, UrgencyLevel } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Eye, Share2 } from 'lucide-react';
+import { Eye, Share2, Trash2 } from 'lucide-react';
 
 interface CallsListProps {
   calls: Call[];
@@ -216,60 +217,69 @@ export default function CallsList({ calls, searchParams }: CallsListProps) {
                 return (
                   <tr
                     key={call.id}
-                    onClick={() => handleCallSelect(call.id)}
-                    className="border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50"
+                    className="border-b border-gray-100 transition-colors hover:bg-gray-50"
                   >
                     <td className="px-4 py-3 text-sm" style={{ color: '#0B1F3B' }}>
-                      {formatDate(call.started_at)}
+                      <Link href={`/calls/${call.id}`} className="block hover:underline">
+                        {formatDate(call.started_at)}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#0B1F3B' }}>
-                      {call.from_number}
+                      <Link href={`/calls/${call.id}`} className="block hover:underline">
+                        {call.from_number}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-sm capitalize" style={{ color: '#4A5D73' }}>
-                      {getCategory(call)}
+                      <Link href={`/calls/${call.id}`} className="block">
+                        {getCategory(call)}
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium" style={{ color: '#0B1F3B' }}>
-                          {urgencyValue}/5
-                        </span>
-                        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden" style={{ maxWidth: '80px' }}>
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${(urgencyValue / 5) * 100}%`,
-                              backgroundColor: urgencyColor,
-                            }}
-                          />
+                      <Link href={`/calls/${call.id}`} className="block">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium" style={{ color: '#0B1F3B' }}>
+                            {urgencyValue}/5
+                          </span>
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden" style={{ maxWidth: '80px' }}>
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${(urgencyValue / 5) * 100}%`,
+                                backgroundColor: urgencyColor,
+                              }}
+                            />
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-sm" style={{ color: '#4A5D73' }}>
-                      {formatDuration(call.started_at, call.ended_at)}
+                      <Link href={`/calls/${call.id}`} className="block">
+                        {formatDuration(call.started_at, call.ended_at)}
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                          call.status === 'emailed' 
-                            ? 'bg-green-50 text-green-700' 
-                            : 'bg-gray-50 text-gray-700'
-                        }`}
-                      >
-                        {call.status === 'emailed' ? 'Resolved' : call.status}
-                      </span>
+                      <Link href={`/calls/${call.id}`} className="block">
+                        <span
+                          className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
+                            call.status === 'emailed' 
+                              ? 'bg-green-50 text-green-700' 
+                              : 'bg-gray-50 text-gray-700'
+                          }`}
+                        >
+                          {call.status === 'emailed' ? 'Resolved' : call.status}
+                        </span>
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCallSelect(call.id);
-                          }}
+                        <Link
+                          href={`/calls/${call.id}`}
                           className="p-1 hover:bg-gray-100 rounded"
                           style={{ color: '#4A5D73' }}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <Eye className="w-4 h-4" />
-                        </button>
+                        </Link>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -279,6 +289,30 @@ export default function CallsList({ calls, searchParams }: CallsListProps) {
                           style={{ color: '#4A5D73' }}
                         >
                           <Share2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (confirm('Are you sure you want to delete this call?')) {
+                              try {
+                                const response = await fetch(`/api/calls/${call.id}`, {
+                                  method: 'DELETE',
+                                });
+                                if (response.ok) {
+                                  router.refresh();
+                                } else {
+                                  alert('Failed to delete call');
+                                }
+                              } catch (error) {
+                                console.error('Error deleting call:', error);
+                                alert('Failed to delete call');
+                              }
+                            }
+                          }}
+                          className="p-1 hover:bg-red-100 rounded hover:text-red-600"
+                          style={{ color: '#4A5D73' }}
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

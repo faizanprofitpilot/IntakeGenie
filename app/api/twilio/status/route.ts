@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         // @ts-ignore - Supabase type inference issue
         .eq('twilio_call_sid', callSid);
 
-      // If call was handled by agent (status is in_progress or transcribing), trigger processing
+      // If call was handled by agent (status is in_progress), trigger processing
       const { data: callData } = await supabase
         .from('calls')
         .select('status')
@@ -61,7 +61,15 @@ export async function POST(request: NextRequest) {
         .single();
 
       const call = callData as any;
-      if (call && (call.status === 'in_progress' || call.status === 'transcribing')) {
+      if (call && call.status === 'in_progress') {
+        // Update status to transcribing first
+        await supabase
+          .from('calls')
+          // @ts-ignore - Supabase type inference issue
+          .update({ status: 'transcribing' })
+          // @ts-ignore - Supabase type inference issue
+          .eq('twilio_call_sid', callSid);
+
         // Trigger async processing (fire and forget)
         const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
         fetch(`${appUrl}/api/process-call?callSid=${callSid}`, {

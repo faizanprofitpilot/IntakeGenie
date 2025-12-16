@@ -119,19 +119,8 @@ export async function POST(request: NextRequest) {
       // Clean up conversation state
       conversationState.delete(callSid);
 
-      // Update call status
-      await supabase
-        .from('calls')
-        // @ts-ignore - Supabase type inference issue
-        .update({ status: 'transcribing' })
-        // @ts-ignore - Supabase type inference issue
-        .eq('twilio_call_sid', callSid);
-
-      // Trigger async processing
-      const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
-      fetch(`${appUrl}/api/process-call?callSid=${callSid}`, {
-        method: 'POST',
-      }).catch((err) => console.error('Error triggering process-call:', err));
+      // Don't update status here - let status callback handle it
+      // This prevents race conditions and ensures proper status flow
 
       response.hangup();
     } else {

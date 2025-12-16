@@ -86,14 +86,17 @@ export async function POST(request: NextRequest) {
           .eq('id', call.id);
         return new Response('Transcription failed', { status: 500 });
       }
+    } else if (!recordingUrl && !transcript) {
+      // If no recording and no transcript, skip to summary with what we have
+      console.log('[Process Call] No recording available, proceeding with intake data only');
     }
 
-    // Generate summary
+    // Generate summary (even if no transcript, use intake data)
     const intake = (call.intake_json as IntakeData) || {};
     let summary: SummaryData;
 
     try {
-      summary = await generateSummary(transcript || '', intake);
+      summary = await generateSummary(transcript || 'No transcript available.', intake);
       await supabase
         .from('calls')
         // @ts-ignore - Supabase type inference issue
