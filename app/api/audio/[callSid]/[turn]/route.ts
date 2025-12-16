@@ -46,19 +46,26 @@ export async function GET(
         }
       } catch (error) {
         console.error('[Deepgram TTS] Error generating audio:', error);
-        // Return error response - caller should fallback to Twilio TTS
-        return new NextResponse('TTS generation failed', { status: 500 });
+        // Return 404 so Twilio will skip this Play and continue
+        // The caller should have fallback logic, but this prevents Twilio from trying to play error text
+        return new NextResponse(null, { 
+          status: 404,
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+        });
       }
     }
 
-    // Return audio as WAV
+    // Return audio - use audio/x-wav for better Twilio compatibility
     // Convert Buffer to Uint8Array for NextResponse
     return new NextResponse(new Uint8Array(audioBuffer), {
       status: 200,
       headers: {
-        'Content-Type': 'audio/wav',
+        'Content-Type': 'audio/x-wav', // Twilio prefers audio/x-wav over audio/wav
         'Cache-Control': 'public, max-age=31536000, immutable',
         'Access-Control-Allow-Origin': '*',
+        'Content-Length': audioBuffer.length.toString(),
       },
     });
   } catch (error) {

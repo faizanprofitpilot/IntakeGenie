@@ -74,6 +74,12 @@ export async function getTTSAudioUrl(
     return { playUrl: null, fallbackText: text };
   }
 
+  // Skip premium TTS if DEEPGRAM_API_KEY is not configured
+  if (!process.env.DEEPGRAM_API_KEY) {
+    console.warn('[TTS] DEEPGRAM_API_KEY not configured, using Twilio TTS fallback');
+    return { playUrl: null, fallbackText: text };
+  }
+
   // Encode text for URL
   const encodedText = encodeURIComponent(text);
   const playUrl = `${appUrl}/api/audio/${callSid}/${turn}?text=${encodedText}`;
