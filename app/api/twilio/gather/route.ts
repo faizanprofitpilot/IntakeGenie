@@ -97,21 +97,23 @@ export async function POST(request: NextRequest) {
 
     const response = new twiml.VoiceResponse();
 
-    // Say the assistant's response - use premium TTS with Deepgram Aura
-    try {
-      // Use turn number based on conversation history length for unique cache keys
-      const turnNumber = state.history.length.toString();
-      const { playUrl, fallbackText } = await getTTSAudioUrl(agentResponse.assistant_say, callSid, turnNumber);
-      if (playUrl) {
-        response.play(playUrl);
-      } else {
-        // Fallback to Twilio TTS
-        response.say({ voice: 'alice' }, fallbackText);
-      }
-    } catch (error) {
-      console.error('[Gather] TTS error, using fallback:', error);
-      response.say({ voice: 'alice' }, agentResponse.assistant_say);
-    }
+    // Say the assistant's response - temporarily using Twilio TTS to avoid Content-Type issues
+    // TODO: Re-enable premium TTS after audio endpoint is fully tested
+    response.say({ voice: 'alice' }, agentResponse.assistant_say);
+    
+    // Premium TTS code (commented out until audio endpoint is verified):
+    // try {
+    //   const turnNumber = state.history.length.toString();
+    //   const { playUrl, fallbackText } = await getTTSAudioUrl(agentResponse.assistant_say, callSid, turnNumber);
+    //   if (playUrl) {
+    //     response.play(playUrl);
+    //   } else {
+    //     response.say({ voice: 'alice' }, fallbackText);
+    //   }
+    // } catch (error) {
+    //   console.error('[Gather] TTS error, using fallback:', error);
+    //   response.say({ voice: 'alice' }, agentResponse.assistant_say);
+    // }
 
     // If done, record the call end and hang up
     if (agentResponse.done) {

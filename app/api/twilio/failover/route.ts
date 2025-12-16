@@ -49,19 +49,8 @@ export async function POST(request: NextRequest) {
         `${appUrl}/api/twilio/stream?callSid=${callSid}&firmId=${firmId}&routeReason=no_answer`
       );
     } else {
-      // Use premium TTS for hold message
-      const holdText = 'Please hold while I connect you.';
-      try {
-        const { playUrl, fallbackText } = await getTTSAudioUrl(holdText, callSid || 'unknown', 'hold');
-        if (playUrl) {
-          response.play(playUrl);
-        } else {
-          response.say({ voice: 'alice' }, fallbackText);
-        }
-      } catch (error) {
-        console.error('[Failover] TTS error, using fallback:', error);
-        response.say({ voice: 'alice' }, holdText);
-      }
+      // Temporarily using Twilio TTS to avoid Content-Type issues
+      response.say({ voice: 'alice' }, 'Please hold while I connect you.');
       const connect = response.connect();
       const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
       connect.stream({
