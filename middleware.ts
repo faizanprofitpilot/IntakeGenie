@@ -3,15 +3,21 @@ import { Database } from '@/types/database';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
   const { pathname } = request.nextUrl;
 
-  // Public routes - allow landing page, login, and API routes
-  if (pathname === '/' || pathname === '/login' || pathname.startsWith('/api/twilio')) {
+  // Public routes - allow landing page, login, and ALL Twilio webhook routes
+  // This check happens FIRST before any Supabase client creation
+  if (
+    pathname === '/' || 
+    pathname === '/login' || 
+    pathname.startsWith('/api/twilio/') ||
+    pathname === '/api/twilio'
+  ) {
     return NextResponse.next();
   }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   // Create response to modify cookies
   let response = NextResponse.next({
