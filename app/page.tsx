@@ -2,6 +2,9 @@
 
 import Link from 'next/link';
 
+// Force dynamic rendering to prevent static generation issues
+export const dynamic = 'force-dynamic';
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom right, #F5F7FA, #ffffff, #F5F7FA)' }}>
