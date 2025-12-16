@@ -22,7 +22,7 @@ export async function OPTIONS() {
   });
 }
 
-export async function POST(request: NextRequest) {
+async function POST(request: NextRequest) {
   console.log('[Twilio Voice] POST request received');
   try {
     const formData = await request.formData();

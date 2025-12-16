@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
     return new NextResponse('OK', { 
       status: 200,
       headers: {
+        'Content-Type': 'text/plain',
         'Access-Control-Allow-Origin': '*',
       },
     });

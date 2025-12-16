@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
     unoptimized: false,
     remotePatterns: [],
   },
+  // Ensure API routes are properly handled
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
 };
 
 export default nextConfig;
