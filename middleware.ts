@@ -83,7 +83,7 @@ export const config = {
      * 
      * Note: The negative lookahead excludes paths starting with these patterns
      */
-    '/((?!_next/static|_next/image|favicon\\.ico|api/twilio|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|api/twilio/|api/twilio$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 
