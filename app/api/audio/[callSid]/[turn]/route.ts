@@ -16,10 +16,10 @@ function getCacheKey(text: string): string {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { callSid: string; turn: string } }
+  { params }: { params: Promise<{ callSid: string; turn: string }> }
 ) {
   try {
-    const { callSid, turn } = params;
+    const { callSid, turn } = await params;
     const text = request.nextUrl.searchParams.get('text');
 
     if (!text) {
@@ -52,7 +52,8 @@ export async function GET(
     }
 
     // Return audio as WAV
-    return new NextResponse(audioBuffer, {
+    // Convert Buffer to Uint8Array for NextResponse
+    return new NextResponse(new Uint8Array(audioBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'audio/wav',
