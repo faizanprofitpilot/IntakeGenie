@@ -1,9 +1,7 @@
 import { createServerClient } from '@/lib/clients/supabase';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import CallDetail from '@/components/CallDetail';
+import CallTranscript from '@/components/CallTranscript';
 import { PlatformLayout } from '@/components/platform-layout';
-import { Button } from '@/components/ui/button';
 
 // Force dynamic rendering since we use cookies for authentication
 export const dynamic = 'force-dynamic';
@@ -43,26 +41,8 @@ export default async function CallDetailPage({ params }: { params: { id: string 
 
   return (
     <PlatformLayout>
-      <div className="w-full px-4 py-4">
-        <div className="max-w-7xl mx-auto px-4 py-8 rounded-xl" style={{ backgroundColor: '#F5F7FA', minHeight: 'calc(100vh - 4rem)' }}>
-          <div className="mb-6">
-            <Button 
-              variant="ghost" 
-              asChild 
-              className="mb-4 h-10 px-4 rounded-lg cursor-pointer"
-              style={{ color: '#0B1F3B' }}
-            >
-              <Link href="/calls">← Back to Calls</Link>
-            </Button>
-            <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ color: '#0B1F3B' }}>
-              Call Details
-            </h1>
-            <p className="text-sm" style={{ color: '#4A5D73' }}>
-              View detailed information about this call
-            </p>
-          </div>
-          <CallDetail call={call as any} />
-        </div>
+      <div className="w-full h-[calc(100vh-4rem)] flex flex-col" style={{ backgroundColor: '#F5F7FA' }}>
+        <CallTranscript call={call as any} />
       </div>
     </PlatformLayout>
   );
