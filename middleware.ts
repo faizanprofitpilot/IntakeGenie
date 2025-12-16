@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const method = request.method;
 
   // Public routes - allow landing page, login, and ALL Twilio webhook routes
   // This check happens FIRST before any Supabase client creation to avoid 401 errors
@@ -14,9 +15,17 @@ export async function middleware(request: NextRequest) {
   ) {
     // Log for debugging (remove in production if needed)
     if (pathname.startsWith('/api/twilio')) {
-      console.log('[Middleware] Allowing Twilio webhook:', pathname);
+      console.log(`[Middleware] Allowing Twilio webhook: ${method} ${pathname}`);
     }
-    return NextResponse.next();
+    // Create a response that preserves the method
+    const response = NextResponse.next();
+    // Ensure CORS headers are set for Twilio webhooks
+    if (pathname.startsWith('/api/twilio')) {
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+    }
+    return response;
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
