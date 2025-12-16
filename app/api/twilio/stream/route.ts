@@ -22,8 +22,9 @@ export async function OPTIONS() {
 }
 
 // Helper function to generate greeting with premium TTS
-async function generateGreeting(response: twiml.VoiceResponse, callSid: string | null) {
-  const greetingText = "Hi. Thanks for calling IntakeGenie. I'm an automated assistant for the firm. I can't give legal advice. But I can collect your information so the firm can follow up. Are you in a safe place to talk right now?";
+async function generateGreeting(response: twiml.VoiceResponse, callSid: string | null, firmName: string | null) {
+  const firmNameText = firmName || 'the firm';
+  const greetingText = `Thank you for calling ${firmNameText}. I'm an automated assistant for the firm. I can't give legal advice. But I can collect your information so the firm can follow up. Are you in a safe place to talk right now?`;
   
   try {
     const { playUrl, fallbackText } = await getTTSAudioUrl(greetingText, callSid || 'unknown', 'greeting');
@@ -65,10 +66,27 @@ export async function POST(request: NextRequest) {
 
   console.log('[Twilio Stream] CallSid:', callSid, 'FirmId:', firmId);
 
+  // Fetch firm name if firmId is provided
+  let firmName: string | null = null;
+  if (firmId) {
+    try {
+      const { createServiceClient } = await import('@/lib/clients/supabase');
+      const supabase = createServiceClient();
+      const { data: firmData } = await supabase
+        .from('firms')
+        .select('firm_name')
+        .eq('id', firmId)
+        .single();
+      firmName = (firmData as any)?.firm_name || null;
+    } catch (error) {
+      console.error('[Stream] Error fetching firm name:', error);
+    }
+  }
+
   const response = new twiml.VoiceResponse();
 
   // Start with greeting - use premium TTS
-  await generateGreeting(response, callSid);
+  await generateGreeting(response, callSid, firmName);
 
   // Start gathering with recording
   // Note: For MVP, we'll record via status callback from Twilio
@@ -95,10 +113,27 @@ export async function GET(request: NextRequest) {
   const callSid = request.nextUrl.searchParams.get('callSid');
   const firmId = request.nextUrl.searchParams.get('firmId');
 
+  // Fetch firm name if firmId is provided
+  let firmName: string | null = null;
+  if (firmId) {
+    try {
+      const { createServiceClient } = await import('@/lib/clients/supabase');
+      const supabase = createServiceClient();
+      const { data: firmData } = await supabase
+        .from('firms')
+        .select('firm_name')
+        .eq('id', firmId)
+        .single();
+      firmName = (firmData as any)?.firm_name || null;
+    } catch (error) {
+      console.error('[Stream] Error fetching firm name:', error);
+    }
+  }
+
   const response = new twiml.VoiceResponse();
 
   // Start with greeting - use premium TTS
-  await generateGreeting(response, callSid);
+  await generateGreeting(response, callSid, firmName);
 
   // Start gathering with recording
   // Note: For MVP, we'll record via status callback from Twilio

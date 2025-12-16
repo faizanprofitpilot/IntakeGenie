@@ -3,8 +3,65 @@ import { createServiceClient } from '@/lib/clients/supabase';
 import { twilioClient } from '@/lib/clients/twilio';
 import { transcribeRecording } from '@/lib/clients/deepgram';
 import { generateSummary } from '@/lib/utils/summarize';
-import { sendIntakeEmail } from '@/lib/clients/resend';
-import { IntakeData, SummaryData } from '@/types';
+import { sendIntakeEmail, resend } from '@/lib/clients/resend';
+import { IntakeData, SummaryData, UrgencyLevel } from '@/types';
+
+/**
+ * Send basic fallback email when full summary email fails
+ */
+async function sendBasicFallbackEmail(
+  to: string[],
+  intake: IntakeData,
+  transcript: string | null,
+  recordingUrl: string | null,
+  urgency: UrgencyLevel
+) {
+  const subject = urgency === 'high' 
+    ? `[HIGH URGENCY] Intake Call - ${intake.full_name || 'Unknown'} — ${new Date().toLocaleDateString()}`
+    : `Intake Call - ${intake.full_name || 'Unknown'} — ${new Date().toLocaleDateString()}`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          h2 { color: #2563eb; }
+          h3 { color: #1e40af; margin-top: 1.5em; }
+          ul { margin: 0.5em 0; }
+          pre { font-size: 0.9em; background: #f5f5f5; padding: 1em; border-radius: 4px; white-space: pre-wrap; }
+        </style>
+      </head>
+      <body>
+        <h2>Intake Call - Basic Summary</h2>
+        <p><em>Note: Full summary generation failed. Below is available intake data.</em></p>
+        <h3>Caller Details</h3>
+        <ul>
+          <li><strong>Name:</strong> ${intake.full_name || 'Not provided'}</li>
+          <li><strong>Phone:</strong> ${intake.callback_number || 'Not provided'}</li>
+          <li><strong>Email:</strong> ${intake.email || 'Not provided'}</li>
+        </ul>
+        ${intake.reason_for_call ? `<h3>Reason for Call</h3><p>${intake.reason_for_call}</p>` : ''}
+        ${transcript ? `<h3>Transcript</h3><pre>${transcript}</pre>` : '<p><em>Transcript not available</em></p>'}
+        ${recordingUrl ? `<p><strong>Recording:</strong> <a href="${recordingUrl}">Listen to Call Recording</a></p>` : '<p><em>Recording not available</em></p>'}
+      </body>
+    </html>
+  `;
+
+  const { data, error } = await resend.emails.send({
+    from: 'IntakeGenie <noreply@intakegenie.com>',
+    to,
+    subject,
+    html,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,13 +87,15 @@ export async function POST(request: NextRequest) {
 
     const call = callData as any;
 
-    // Update status to transcribing
-    await supabase
-      .from('calls')
-      // @ts-ignore - Supabase type inference issue
-      .update({ status: 'transcribing' })
-      // @ts-ignore - Supabase type inference issue
-      .eq('id', call.id);
+    // Only update to transcribing if not already in that state (avoid race conditions)
+    if (call.status !== 'transcribing' && call.status !== 'summarizing' && call.status !== 'emailed') {
+      await supabase
+        .from('calls')
+        // @ts-ignore - Supabase type inference issue
+        .update({ status: 'transcribing' })
+        // @ts-ignore - Supabase type inference issue
+        .eq('id', call.id);
+    }
 
     let transcript = call.transcript_text;
     let recordingUrl = call.recording_url;
@@ -100,24 +159,40 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('calls')
         // @ts-ignore - Supabase type inference issue
-        .update({ summary_json: summary as any, status: 'emailed' })
+        .update({ summary_json: summary as any, status: 'summarizing' })
         // @ts-ignore - Supabase type inference issue
         .eq('id', call.id);
     } catch (error) {
-      console.error('Summarization error:', error);
-        await supabase
-          .from('calls')
-          // @ts-ignore - Supabase type inference issue
-          .update({
-            status: 'error',
-            error_message: `Summarization failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          })
-          // @ts-ignore - Supabase type inference issue
-          .eq('id', call.id);
-      return new Response('Summarization failed', { status: 500 });
+      console.error('[Process Call] Summarization error:', error);
+      // Create fallback summary instead of failing
+      summary = {
+        title: `Intake Call - ${intake.full_name || 'Unknown'}`,
+        summary_bullets: [
+          `Caller: ${intake.full_name || 'Unknown'}`,
+          `Phone: ${intake.callback_number || 'Not provided'}`,
+          `Reason: ${intake.reason_for_call || 'Not specified'}`,
+          transcript ? 'Full transcript available below' : 'No transcript available',
+        ],
+        key_facts: {
+          incident_date: intake.incident_date_or_timeframe,
+          location: intake.incident_location,
+          injuries: intake.injury_description,
+          treatment: intake.medical_treatment_received,
+          insurance: intake.insurance_involved,
+        },
+        action_items: ['Review intake details', 'Follow up with caller'],
+        urgency_level: (call.urgency as UrgencyLevel) || 'normal',
+        follow_up_recommendation: 'Standard follow-up recommended - summary generation had issues',
+      };
+      await supabase
+        .from('calls')
+        // @ts-ignore - Supabase type inference issue
+        .update({ summary_json: summary as any, status: 'summarizing' })
+        // @ts-ignore - Supabase type inference issue
+        .eq('id', call.id);
     }
 
-    // Send email
+    // Send email - ALWAYS send, even if summarization failed
     const firm = call.firms as any;
     if (firm && firm.notify_emails && firm.notify_emails.length > 0) {
       try {
@@ -129,19 +204,52 @@ export async function POST(request: NextRequest) {
           recordingUrl,
           call.urgency as any
         );
-      } catch (error) {
-        console.error('Email error:', error);
+        // Update status to emailed only after successful email
         await supabase
           .from('calls')
           // @ts-ignore - Supabase type inference issue
-          .update({
-            status: 'error',
-            error_message: `Email failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          })
+          .update({ status: 'emailed' })
           // @ts-ignore - Supabase type inference issue
           .eq('id', call.id);
-        return new Response('Email failed', { status: 500 });
+      } catch (error) {
+        console.error('[Process Call] Email sending failed after retries:', error);
+        // Send fallback basic email
+        try {
+          await sendBasicFallbackEmail(
+            firm.notify_emails,
+            intake,
+            transcript,
+            recordingUrl,
+            call.urgency as any
+          );
+          await supabase
+            .from('calls')
+            // @ts-ignore - Supabase type inference issue
+            .update({ status: 'emailed' })
+            // @ts-ignore - Supabase type inference issue
+            .eq('id', call.id);
+        } catch (fallbackError) {
+          console.error('[Process Call] Fallback email also failed:', fallbackError);
+          await supabase
+            .from('calls')
+            // @ts-ignore - Supabase type inference issue
+            .update({
+              status: 'error',
+              error_message: `Email failed after retries and fallback: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            })
+            // @ts-ignore - Supabase type inference issue
+            .eq('id', call.id);
+          return new Response('Email failed', { status: 500 });
+        }
       }
+    } else {
+      // No email addresses configured - still mark as emailed
+      await supabase
+        .from('calls')
+        // @ts-ignore - Supabase type inference issue
+        .update({ status: 'emailed' })
+        // @ts-ignore - Supabase type inference issue
+        .eq('id', call.id);
     }
 
     return new Response('OK', { status: 200 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateTwiML, normalizeAppUrl, getTTSAudioUrl } from '@/lib/clients/twilio';
+import { generateTwiML, normalizeAppUrl, getTTSAudioUrl, getFillerPhraseUrl, triggerSpeculativeTTS } from '@/lib/clients/twilio';
 import { createServiceClient } from '@/lib/clients/supabase';
 import { processAgentTurn } from '@/lib/clients/openai';
 import { ConversationState, IntakeData } from '@/types';
@@ -46,6 +46,21 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
+    // Fetch firm name for closing script
+    let firmName: string | null = null;
+    if (firmId) {
+      try {
+        const { data: firmData } = await supabase
+          .from('firms')
+          .select('firm_name')
+          .eq('id', firmId)
+          .single();
+        firmName = (firmData as any)?.firm_name || null;
+      } catch (error) {
+        console.error('[Gather] Error fetching firm name:', error);
+      }
+    }
+
     // Get or initialize conversation state
     let state = conversationState.get(callSid);
     if (!state) {
@@ -69,6 +84,7 @@ export async function POST(request: NextRequest) {
         state: state.state,
         filled: state.filled,
         conversationHistory: state.history,
+        firmName: firmName,
       },
       userUtterance || 'Hello'
     );
@@ -76,7 +92,11 @@ export async function POST(request: NextRequest) {
     // Update state
     state.state = agentResponse.next_state;
     state.filled = { ...state.filled, ...agentResponse.updates };
-    state.history.push({ role: 'assistant', content: agentResponse.assistant_say });
+    // Use the response text (which may be overridden for CLOSE state)
+    const actualResponseText = (agentResponse.next_state === 'CLOSE' || agentResponse.done) 
+      ? (firmName ? `Thank you. I've shared this information with the firm. Someone from ${firmName} will review it and contact you within one business day. If this becomes urgent or you feel unsafe, please call 911. Take care.` : agentResponse.assistant_say)
+      : agentResponse.assistant_say;
+    state.history.push({ role: 'assistant', content: actualResponseText });
 
     // Persist intake_json to database
     if (Object.keys(agentResponse.updates).length > 0) {
@@ -97,11 +117,37 @@ export async function POST(request: NextRequest) {
 
     const response = new twiml.VoiceResponse();
 
+    // Add immediate filler phrase to eliminate dead air (non-blocking)
+    try {
+      const { playUrl: fillerUrl, fallbackText: fillerFallback } = await getFillerPhraseUrl(callSid);
+      if (fillerUrl) {
+        response.play(fillerUrl);
+      } else {
+        response.say({ voice: 'alice' }, fillerFallback);
+      }
+    } catch (error) {
+      // Fallback to simple filler if TTS fails
+      response.say({ voice: 'alice' }, 'One moment.');
+    }
+
+    // Trigger speculative TTS generation in background for next response (non-blocking)
+    if (!agentResponse.done) {
+      // Predict likely next response text (simple heuristic)
+      triggerSpeculativeTTS("Thanks. Let me ask you something.", callSid, `${state.history.length + 1}`);
+    }
+
+    // Override closing script with exact required text
+    let responseText = agentResponse.assistant_say;
+    if (agentResponse.next_state === 'CLOSE' || agentResponse.done) {
+      const firmNameText = firmName || 'the firm';
+      responseText = `Thank you. I've shared this information with the firm. Someone from ${firmNameText} will review it and contact you within one business day. If this becomes urgent or you feel unsafe, please call 911. Take care.`;
+    }
+
     // Say the assistant's response - use premium TTS with Deepgram Aura (MP3)
     try {
       // Use turn number based on conversation history length for unique cache keys
       const turnNumber = state.history.length.toString();
-      const { playUrl, fallbackText } = await getTTSAudioUrl(agentResponse.assistant_say, callSid, turnNumber);
+      const { playUrl, fallbackText } = await getTTSAudioUrl(responseText, callSid, turnNumber);
       console.log('[Gather] Play URL:', playUrl);
       if (playUrl) {
         response.play(playUrl);
@@ -111,7 +157,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (error) {
       console.error('[Gather] TTS error, using fallback:', error);
-      response.say({ voice: 'alice' }, agentResponse.assistant_say);
+      response.say({ voice: 'alice' }, responseText);
     }
 
     // If done, record the call end and hang up
@@ -119,8 +165,20 @@ export async function POST(request: NextRequest) {
       // Clean up conversation state
       conversationState.delete(callSid);
 
-      // Don't update status here - let status callback handle it
-      // This prevents race conditions and ensures proper status flow
+      // Update status to transcribing and trigger processing
+      // This ensures processing starts even if status callback is delayed
+      await supabase
+        .from('calls')
+        // @ts-ignore - Supabase type inference issue
+        .update({ status: 'transcribing' })
+        // @ts-ignore - Supabase type inference issue
+        .eq('twilio_call_sid', callSid);
+
+      // Trigger async processing (fire and forget)
+      const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
+      fetch(`${appUrl}/api/process-call?callSid=${callSid}`, {
+        method: 'POST',
+      }).catch((err) => console.error('[Gather] Error triggering process-call:', err));
 
       response.hangup();
     } else {

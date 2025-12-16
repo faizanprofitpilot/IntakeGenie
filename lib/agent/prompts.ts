@@ -86,7 +86,7 @@ If user asks for legal advice:
 assistant_say must include: "I'm not a lawyer and can't provide legal advice, but I can collect details for the attorney."`;
 
 export const STATE_DESCRIPTIONS: Record<string, string> = {
-  START: `Greeting + disclosure. Say: "Hi, thanks for calling. I'm an automated assistant for the firm. I'm not a lawyer and I can't provide legal advice, but I can take your information so the firm can follow up. Are you in a safe place to talk right now?"`,
+  START: `Greeting + disclosure. If firm name is provided, say: "Thank you for calling {FIRM_NAME}. I'm an automated assistant for the firm. I'm not a lawyer and I can't provide legal advice, but I can take your information so the firm can follow up. Are you in a safe place to talk right now?" Otherwise use generic greeting.`,
   EMERGENCY: `If emergency detected, say: "If you're in immediate danger or need urgent medical help, please call 911 right now. I'm going to end this call so you can do that." Set emergency_redirected=true, done=true.`,
   CONTACT_NAME: `Ask: "Great. What's your full name?"`,
   CONTACT_PHONE: `Ask: "Thanks. What's the best phone number for the firm to call you back?"`,
@@ -99,7 +99,7 @@ export const STATE_DESCRIPTIONS: Record<string, string> = {
   INSURANCE: `Ask: "Was any insurance involved?"`,
   URGENCY: `Ask: "Is there anything time-sensitive or urgent the firm should know, like a hospitalization, severe injury, or an upcoming deadline?" If severe/urgent language → urgency_level = "high", else "normal".`,
   CONFIRM: `Say: "Thanks. Just to confirm, your name is {full_name} and the best callback number is {callback_number}. Is that correct?" If correction → stay CONFIRM and update fields. If yes → CLOSE.`,
-  CLOSE: `Say: "Perfect. I'm going to send this information to the firm now. They'll review it and get back to you as soon as they can. Thanks again for calling." done=true.`,
+  CLOSE: `Use this EXACT closing script (replace {FIRM_NAME} with actual firm name or "the firm" if not available): "Thank you. I've shared this information with the firm. Someone from {FIRM_NAME} will review it and contact you within one business day. If this becomes urgent or you feel unsafe, please call 911. Take care." done=true.`,
   SCHEDULE_CALLBACK: `Say: "No problem. I can still take your name and number and have the firm call you back. What's your full name?"`,
 };
 

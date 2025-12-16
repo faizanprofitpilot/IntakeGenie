@@ -94,22 +94,35 @@ export async function sendIntakeEmail(
     </html>
   `;
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: 'IntakeGenie <noreply@intakegenie.com>', // Update with your verified domain
-      to,
-      subject,
-      html,
-    });
+  const maxRetries = 3;
+  let lastError: any = null;
 
-    if (error) {
-      throw error;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const { data, error } = await resend.emails.send({
+        from: 'IntakeGenie <noreply@intakegenie.com>', // Update with your verified domain
+        to,
+        subject,
+        html,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      lastError = error;
+      console.error(`[Resend] Email attempt ${attempt}/${maxRetries} failed:`, error);
+      if (attempt < maxRetries) {
+        // Wait before retry (exponential backoff: 1s, 2s, 4s)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt - 1) * 1000));
+      }
     }
-
-    return data;
-  } catch (error) {
-    console.error('Resend email error:', error);
-    throw error;
   }
+
+  // All retries failed
+  console.error('[Resend] All email attempts failed');
+  throw lastError;
 }
 

@@ -16,20 +16,22 @@ export interface ConversationContext {
   state: ConversationState;
   filled: Partial<IntakeData>;
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
+  firmName?: string | null;
 }
 
 export async function processAgentTurn(
   context: ConversationContext,
   userUtterance: string
 ): Promise<AgentResponse> {
+  const firmNameContext = context.firmName ? `\n\nFirm name: ${context.firmName}` : '';
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: SYSTEM_PROMPT + '\n\n' + DEVELOPER_INSTRUCTIONS,
+      content: SYSTEM_PROMPT + '\n\n' + DEVELOPER_INSTRUCTIONS + firmNameContext,
     },
     {
       role: 'system',
-      content: `Current state: ${context.state}\nState description: ${STATE_DESCRIPTIONS[context.state] || ''}\nFields collected so far: ${JSON.stringify(context.filled)}`,
+      content: `Current state: ${context.state}\nState description: ${STATE_DESCRIPTIONS[context.state] || ''}\nFields collected so far: ${JSON.stringify(context.filled)}${firmNameContext}`,
     },
     ...context.conversationHistory.map((msg) => ({
       role: msg.role,
