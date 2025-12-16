@@ -103,14 +103,16 @@ export async function POST(request: NextRequest) {
     if (!isOpen && (firm.mode === 'after_hours' || firm.mode === 'both')) {
       // After hours - route directly to agent
       // Use redirect to stream endpoint which handles Gather flow
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '');
       response.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/stream?callSid=${callSid}&firmId=${firm.id}`
+        `${appUrl}/api/twilio/stream?callSid=${callSid}&firmId=${firm.id}`
       );
     } else if (isOpen && (firm.mode === 'failover' || firm.mode === 'both')) {
       // Business hours - try to forward, with failover to agent
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '');
       const dial = response.dial({
         timeout: firm.failover_ring_seconds,
-        action: `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/failover?firmId=${firm.id}&callSid=${callSid}`,
+        action: `${appUrl}/api/twilio/failover?firmId=${firm.id}&callSid=${callSid}`,
         method: 'POST',
         record: 'record-from-answer',
       });

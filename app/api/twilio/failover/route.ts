@@ -44,14 +44,16 @@ export async function POST(request: NextRequest) {
         // @ts-ignore - Supabase type inference issue
         .eq('twilio_call_sid', callSid);
 
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '');
       response.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/stream?callSid=${callSid}&firmId=${firmId}&routeReason=no_answer`
+        `${appUrl}/api/twilio/stream?callSid=${callSid}&firmId=${firmId}&routeReason=no_answer`
       );
     } else {
       response.say({ voice: 'alice' }, 'Please hold while I connect you.');
       const connect = response.connect();
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '');
       connect.stream({
-        url: `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/stream?callSid=${callSid || ''}&firmId=${firmId || ''}`,
+        url: `${appUrl}/api/twilio/stream?callSid=${callSid || ''}&firmId=${firmId || ''}`,
       });
     }
 

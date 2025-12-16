@@ -60,6 +60,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize URL: remove trailing slash to prevent double slashes
+    appUrl = appUrl.replace(/\/+$/, '');
+
     // Twilio requires HTTPS URLs (except for localhost in some cases)
     // Convert http://localhost to https for Twilio, or require HTTPS
     if (appUrl.startsWith('http://') && !appUrl.includes('localhost')) {

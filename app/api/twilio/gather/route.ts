@@ -114,7 +114,8 @@ export async function POST(request: NextRequest) {
         .eq('twilio_call_sid', callSid);
 
       // Trigger async processing
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/process-call?callSid=${callSid}`, {
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '');
+      fetch(`${appUrl}/api/process-call?callSid=${callSid}`, {
         method: 'POST',
       }).catch((err) => console.error('Error triggering process-call:', err));
 

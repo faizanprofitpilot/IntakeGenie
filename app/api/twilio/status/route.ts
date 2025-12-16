@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
       const call = callData as any;
       if (call && (call.status === 'in_progress' || call.status === 'transcribing')) {
         // Trigger async processing (fire and forget)
-        fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/process-call?callSid=${callSid}`, {
+        const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '');
+        fetch(`${appUrl}/api/process-call?callSid=${callSid}`, {
           method: 'POST',
         }).catch((err) => console.error('Error triggering process-call:', err));
       }
