@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateTwiML, normalizeAppUrl } from '@/lib/clients/twilio';
+import { generateTwiML, normalizeAppUrl, getTTSAudioUrl } from '@/lib/clients/twilio';
 import { createServiceClient } from '@/lib/clients/supabase';
 import { processAgentTurn } from '@/lib/clients/openai';
 import { ConversationState, IntakeData } from '@/types';
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     if (!callSid) {
       return generateTwiML(
-        '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Error processing call.</Say><Hangup/></Response>'
+        '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Error processing call.</Say><Hangup/></Response>'
       );
     }
 
@@ -97,8 +97,21 @@ export async function POST(request: NextRequest) {
 
     const response = new twiml.VoiceResponse();
 
-    // Say the assistant's response
-    response.say({ voice: 'alice' }, agentResponse.assistant_say);
+    // Say the assistant's response - use premium TTS with Deepgram Aura
+    try {
+      // Use turn number based on conversation history length for unique cache keys
+      const turnNumber = state.history.length.toString();
+      const { playUrl, fallbackText } = await getTTSAudioUrl(agentResponse.assistant_say, callSid, turnNumber);
+      if (playUrl) {
+        response.play(playUrl);
+      } else {
+        // Fallback to Twilio TTS
+        response.say({ voice: 'alice' }, fallbackText);
+      }
+    } catch (error) {
+      console.error('[Gather] TTS error, using fallback:', error);
+      response.say({ voice: 'alice' }, agentResponse.assistant_say);
+    }
 
     // If done, record the call end and hang up
     if (agentResponse.done) {
@@ -135,7 +148,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in gather handler:', error);
     return generateTwiML(
-      '<?xml version="1.0" encoding="UTF-8"?><Response><Say>I apologize, but I encountered an error. Please call back later.</Say><Hangup/></Response>'
+      '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">I apologize, but I encountered an error. Please call back later.</Say><Hangup/></Response>'
     );
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateTwiML, normalizeAppUrl } from '@/lib/clients/twilio';
+import { generateTwiML, normalizeAppUrl, getTTSAudioUrl } from '@/lib/clients/twilio';
 import { createServiceClient } from '@/lib/clients/supabase';
 import { twiml } from 'twilio';
 
@@ -49,7 +49,19 @@ export async function POST(request: NextRequest) {
         `${appUrl}/api/twilio/stream?callSid=${callSid}&firmId=${firmId}&routeReason=no_answer`
       );
     } else {
-      response.say({ voice: 'alice' }, 'Please hold while I connect you.');
+      // Use premium TTS for hold message
+      const holdText = 'Please hold while I connect you.';
+      try {
+        const { playUrl, fallbackText } = await getTTSAudioUrl(holdText, callSid || 'unknown', 'hold');
+        if (playUrl) {
+          response.play(playUrl);
+        } else {
+          response.say({ voice: 'alice' }, fallbackText);
+        }
+      } catch (error) {
+        console.error('[Failover] TTS error, using fallback:', error);
+        response.say({ voice: 'alice' }, holdText);
+      }
       const connect = response.connect();
       const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
       connect.stream({
@@ -61,7 +73,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in failover webhook:', error);
     return generateTwiML(
-      '<?xml version="1.0" encoding="UTF-8"?><Response><Say>An error occurred. Please try again later.</Say><Hangup/></Response>'
+      '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">An error occurred. Please try again later.</Say><Hangup/></Response>'
     );
   }
 }

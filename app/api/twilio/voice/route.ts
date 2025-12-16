@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/clients/supabase';
-import { generateTwiML, twilioNumber, normalizeAppUrl } from '@/lib/clients/twilio';
+import { generateTwiML, twilioNumber, normalizeAppUrl, getTTSAudioUrl } from '@/lib/clients/twilio';
 import { isBusinessHoursOpen } from '@/lib/utils/business-hours';
 import { twiml } from 'twilio';
 
@@ -33,8 +33,9 @@ export async function POST(request: NextRequest) {
     const toNumber = formData.get('To') as string;
 
     if (!callSid || !fromNumber || !toNumber) {
+      // Error message - use fallback Twilio TTS for errors (faster, simpler)
       return generateTwiML(
-        '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Error processing call. Please try again later.</Say><Hangup/></Response>'
+        '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Error processing call. Please try again later.</Say><Hangup/></Response>'
       );
     }
 
@@ -60,13 +61,13 @@ export async function POST(request: NextRequest) {
 
         if (fallbackError || !fallbackFirm) {
           return generateTwiML(
-            '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Service configuration error. Please contact support.</Say><Hangup/></Response>'
+            '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Service configuration error. Please contact support.</Say><Hangup/></Response>'
           );
         }
         firm = fallbackFirm;
       } else {
         return generateTwiML(
-          '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Service configuration error. Please contact support.</Say><Hangup/></Response>'
+          '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Service configuration error. Please contact support.</Say><Hangup/></Response>'
         );
       }
     } else {
@@ -125,10 +126,19 @@ export async function POST(request: NextRequest) {
       dial.number(firm.forward_to_number);
     } else {
       // Closed and no after-hours mode - hang up
-      response.say(
-        { voice: 'alice' },
-        'Our office is currently closed. Please call back during business hours.'
-      );
+      // Use premium TTS for this message
+      const closedText = 'Our office is currently closed. Please call back during business hours.';
+      try {
+        const { playUrl, fallbackText } = await getTTSAudioUrl(closedText, callSid, 'closed');
+        if (playUrl) {
+          response.play(playUrl);
+        } else {
+          response.say({ voice: 'alice' }, fallbackText);
+        }
+      } catch (error) {
+        console.error('[Voice] TTS error, using fallback:', error);
+        response.say({ voice: 'alice' }, closedText);
+      }
       response.hangup();
     }
 
@@ -136,7 +146,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error in voice webhook:', error);
     return generateTwiML(
-      '<?xml version="1.0" encoding="UTF-8"?><Response><Say>An error occurred. Please try again later.</Say><Hangup/></Response>'
+      '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">An error occurred. Please try again later.</Say><Hangup/></Response>'
     );
   }
 }

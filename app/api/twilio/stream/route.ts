@@ -1,7 +1,7 @@
 // This endpoint is for Media Streams (future enhancement)
 // For MVP, we use Gather instead, so this is a placeholder
 import { NextRequest, NextResponse } from 'next/server';
-import { generateTwiML } from '@/lib/clients/twilio';
+import { generateTwiML, getTTSAudioUrl } from '@/lib/clients/twilio';
 import { twiml } from 'twilio';
 
 // Ensure this route is public (no authentication required)

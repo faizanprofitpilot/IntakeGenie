@@ -49,3 +49,35 @@ export function generateTwiML(xml: string): NextResponse {
   });
 }
 
+/**
+ * Generate a premium TTS audio URL using Deepgram Aura
+ * Falls back to Twilio <Say> if Deepgram is unavailable
+ * 
+ * @param text - Text to speak (use short sentences)
+ * @param callSid - Call SID for audio URL generation
+ * @param turn - Turn number for audio URL generation
+ * @param usePremium - Whether to use premium TTS (default: true)
+ * @returns Object with playUrl (for <Play>) and fallbackText (for <Say>)
+ */
+export async function getTTSAudioUrl(
+  text: string,
+  callSid: string,
+  turn: string = '0',
+  usePremium: boolean = true
+): Promise<{ playUrl: string | null; fallbackText: string }> {
+  if (!usePremium) {
+    return { playUrl: null, fallbackText: text };
+  }
+
+  const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
+  if (!appUrl) {
+    return { playUrl: null, fallbackText: text };
+  }
+
+  // Encode text for URL
+  const encodedText = encodeURIComponent(text);
+  const playUrl = `${appUrl}/api/audio/${callSid}/${turn}?text=${encodedText}`;
+
+  return { playUrl, fallbackText: text };
+}
+
