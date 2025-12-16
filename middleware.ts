@@ -82,8 +82,9 @@ export const config = {
      * - public folder
      * 
      * Note: The negative lookahead (?!...) excludes paths that start with these patterns
+     * The pattern checks what comes AFTER the leading /, so we check for the full path segments
      */
-    '/((?!_next/static|_next/image|favicon\\.ico|api/twilio|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|api/twilio/|api/twilio$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 
