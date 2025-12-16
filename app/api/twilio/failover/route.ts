@@ -1,0 +1,51 @@
+import { NextRequest } from 'next/server';
+import { generateTwiML } from '@/lib/clients/twilio';
+import { createServiceClient } from '@/lib/clients/supabase';
+import { twiml } from 'twilio';
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const dialCallStatus = formData.get('DialCallStatus') as string;
+    const callSid = request.nextUrl.searchParams.get('callSid');
+    const firmId = request.nextUrl.searchParams.get('firmId');
+
+    const response = new twiml.VoiceResponse();
+
+    // If the firm answered, hang up
+    if (dialCallStatus === 'completed') {
+      response.hangup();
+      return generateTwiML(response.toString());
+    }
+
+    // Otherwise, route to agent
+    if (callSid && firmId) {
+      // Update call record with route reason
+      const supabase = createServiceClient();
+      await supabase
+        .from('calls')
+        // @ts-ignore - Supabase type inference issue
+        .update({ route_reason: 'no_answer' })
+        // @ts-ignore - Supabase type inference issue
+        .eq('twilio_call_sid', callSid);
+
+      response.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/stream?callSid=${callSid}&firmId=${firmId}&routeReason=no_answer`
+      );
+    } else {
+      response.say({ voice: 'alice' }, 'Please hold while I connect you.');
+      const connect = response.connect();
+      connect.stream({
+        url: `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/stream?callSid=${callSid || ''}&firmId=${firmId || ''}`,
+      });
+    }
+
+    return generateTwiML(response.toString());
+  } catch (error) {
+    console.error('Error in failover webhook:', error);
+    return generateTwiML(
+      '<?xml version="1.0" encoding="UTF-8"?><Response><Say>An error occurred. Please try again later.</Say><Hangup/></Response>'
+    );
+  }
+}
+

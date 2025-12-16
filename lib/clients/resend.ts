@@ -1,0 +1,115 @@
+import { Resend } from 'resend';
+import { SummaryData, IntakeData, UrgencyLevel } from '@/types';
+
+const apiKey = process.env.RESEND_API_KEY;
+
+if (!apiKey) {
+  throw new Error('Missing RESEND_API_KEY');
+}
+
+export const resend = new Resend(apiKey);
+
+export async function sendIntakeEmail(
+  to: string[],
+  intake: IntakeData,
+  summary: SummaryData,
+  transcript: string | null,
+  recordingUrl: string | null,
+  urgency: UrgencyLevel
+) {
+  const subject = urgency === 'high' 
+    ? `[HIGH URGENCY] New Intake Call: ${intake.full_name || 'Unknown'} — ${new Date().toLocaleDateString()}`
+    : `New Intake Call: ${intake.full_name || 'Unknown'} — ${new Date().toLocaleDateString()}`;
+
+  const callerDetails = `
+    <h3>Caller Details</h3>
+    <ul>
+      <li><strong>Name:</strong> ${intake.full_name || 'Not provided'}</li>
+      <li><strong>Phone:</strong> ${intake.callback_number || 'Not provided'}</li>
+      <li><strong>Email:</strong> ${intake.email || 'Not provided'}</li>
+    </ul>
+  `;
+
+  const summarySection = `
+    <h3>Summary</h3>
+    <ul>
+      ${summary.summary_bullets.map(bullet => `<li>${bullet}</li>`).join('')}
+    </ul>
+  `;
+
+  const keyFacts = `
+    <h3>Key Facts</h3>
+    <ul>
+      ${summary.key_facts.incident_date ? `<li><strong>Incident Date:</strong> ${summary.key_facts.incident_date}</li>` : ''}
+      ${summary.key_facts.location ? `<li><strong>Location:</strong> ${summary.key_facts.location}</li>` : ''}
+      ${summary.key_facts.injuries ? `<li><strong>Injuries:</strong> ${summary.key_facts.injuries}</li>` : ''}
+      ${summary.key_facts.treatment ? `<li><strong>Treatment:</strong> ${summary.key_facts.treatment}</li>` : ''}
+      ${summary.key_facts.insurance ? `<li><strong>Insurance:</strong> ${summary.key_facts.insurance}</li>` : ''}
+    </ul>
+  `;
+
+  const actionItems = `
+    <h3>Action Items</h3>
+    <ul>
+      ${summary.action_items.map(item => `<li>${item}</li>`).join('')}
+    </ul>
+  `;
+
+  const transcriptSection = transcript ? `
+    <details>
+      <summary><strong>Full Transcript</strong> (Click to expand)</summary>
+      <pre style="white-space: pre-wrap; background: #f5f5f5; padding: 1em; border-radius: 4px;">${transcript}</pre>
+    </details>
+  ` : '<p><em>Transcript not available</em></p>';
+
+  const recordingSection = recordingUrl ? `
+    <p><strong>Recording:</strong> <a href="${recordingUrl}">Listen to Call Recording</a></p>
+  ` : '<p><em>Recording not available</em></p>';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          h2 { color: #2563eb; }
+          h3 { color: #1e40af; margin-top: 1.5em; }
+          ul { margin: 0.5em 0; }
+          details { margin: 1em 0; }
+          pre { font-size: 0.9em; }
+        </style>
+      </head>
+      <body>
+        <h2>${summary.title}</h2>
+        ${callerDetails}
+        ${summarySection}
+        ${keyFacts}
+        ${actionItems}
+        <h3>Follow-up Recommendation</h3>
+        <p>${summary.follow_up_recommendation}</p>
+        ${transcriptSection}
+        ${recordingSection}
+      </body>
+    </html>
+  `;
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: 'IntakeGenie <noreply@intakegenie.com>', // Update with your verified domain
+      to,
+      subject,
+      html,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Resend email error:', error);
+    throw error;
+  }
+}
+
