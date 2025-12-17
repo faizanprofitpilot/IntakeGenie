@@ -411,14 +411,15 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                 </div>
               )}
 
-              {/* Link Existing Phone Number */}
-              <div className="mt-4 p-3 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
-                <p className="text-xs font-semibold mb-2" style={{ color: '#4A5D73' }}>
-                  Link Existing Vapi Phone Number
-                </p>
-                <p className="text-xs mb-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                  If you have a phone number already in Vapi (e.g., imported from Twilio), enter its ID to link it to this firm.
-                </p>
+              {/* Link Existing Phone Number - Only show if no number is provisioned */}
+              {!firm.inbound_number_e164 && !firm.vapi_phone_number_id && !firm.twilio_phone_number_sid && (
+                <details className="mt-4 p-3 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
+                  <summary className="text-xs font-semibold mb-2 cursor-pointer" style={{ color: '#4A5D73' }}>
+                    Link Existing Vapi Phone Number (Advanced)
+                  </summary>
+                  <p className="text-xs mb-2 mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
+                    Only use this if you've already imported a phone number into Vapi manually (via the Vapi dashboard) and want to link it to this firm. For new numbers, use the "Provision Phone Number" button above.
+                  </p>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -546,10 +547,11 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                     Link Number
                   </button>
                 </div>
-                <p className="text-xs mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                  Find the phone number ID in the Vapi dashboard URL: <code className="bg-gray-200 px-1 rounded">/phone-numbers/[ID]</code>
-                </p>
-              </div>
+                  <p className="text-xs mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
+                    Find the phone number ID in the Vapi dashboard URL: <code className="bg-gray-200 px-1 rounded">/phone-numbers/[ID]</code>
+                  </p>
+                </details>
+              )}
             </div>
           </section>
         )}
