@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     // Create assistant first
     let assistantResponse;
     try {
-      assistantResponse = await vapi.post('/assistants', {
+      const assistantPayload = {
         name: `${firm.firm_name} Intake Assistant`,
         model: agentConfig.model,
         voice: agentConfig.voice,
@@ -74,12 +74,25 @@ export async function POST(req: NextRequest) {
         server: {
           url: webhookUrl,
         },
-      });
+      };
+      
+      console.log('[Vapi Provision] Creating assistant with payload:', JSON.stringify(assistantPayload, null, 2));
+      
+      assistantResponse = await vapi.post('/assistants', assistantPayload);
+      
+      console.log('[Vapi Provision] Assistant created successfully:', assistantResponse.data);
     } catch (vapiError: any) {
-      console.error('[Vapi Provision] Assistant creation error:', vapiError?.response?.data || vapiError?.message || vapiError);
+      const errorDetails = vapiError?.response?.data || vapiError?.message || vapiError;
+      console.error('[Vapi Provision] Assistant creation error:', errorDetails);
+      console.error('[Vapi Provision] Full error:', vapiError);
+      console.error('[Vapi Provision] Error status:', vapiError?.response?.status);
+      console.error('[Vapi Provision] Error headers:', vapiError?.response?.headers);
+      
       return NextResponse.json({ 
         error: 'Failed to create assistant',
-        details: vapiError?.response?.data || vapiError?.message || 'Unknown error'
+        details: errorDetails,
+        status: vapiError?.response?.status,
+        message: vapiError?.response?.data?.message || vapiError?.message
       }, { status: 500 });
     }
 

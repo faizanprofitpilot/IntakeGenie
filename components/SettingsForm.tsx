@@ -166,6 +166,10 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
             if (!provisionResponse.ok) {
               const errorData = await provisionResponse.json();
               console.error('Error provisioning Vapi number:', errorData);
+              console.error('Error details:', errorData.details);
+              console.error('Error message:', errorData.message);
+              // Show user-friendly error
+              setError(errorData.message || errorData.error || 'Failed to provision number. Check console for details.');
               // Don't throw - allow settings update to succeed
             }
           } catch (provisionError) {
@@ -201,6 +205,10 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
           if (!provisionResponse.ok) {
             const errorData = await provisionResponse.json();
             console.error('Error provisioning Vapi number:', errorData);
+            console.error('Error details:', errorData.details);
+            console.error('Error message:', errorData.message);
+            // Show user-friendly error
+            setError(errorData.message || errorData.error || 'Failed to provision number. Check console for details.');
             // Don't throw - allow firm creation to succeed even if number provision fails
             // User can retry later via the provision button if needed
           }
