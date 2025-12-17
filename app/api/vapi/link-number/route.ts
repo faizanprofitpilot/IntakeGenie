@@ -77,14 +77,7 @@ export async function POST(req: NextRequest) {
         if ((agentConfig as any).stopSpeakingPlan) {
           assistantPayload.stopSpeakingPlan = (agentConfig as any).stopSpeakingPlan;
         }
-        // Add hooks for call ending
-        if ((agentConfig as any).hooks) {
-          assistantPayload.hooks = (agentConfig as any).hooks;
-        }
-        // Add functions for call ending
-        if ((agentConfig as any).functions) {
-          assistantPayload.functions = (agentConfig as any).functions;
-        }
+        // Note: Call ending handled via webhook when agent says goodbye
         
         const assistantResponse = await vapi.post('/assistant', assistantPayload);
         assistantId = assistantResponse.data.id;

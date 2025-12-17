@@ -47,6 +47,16 @@ export async function upsertCall({
   } else if (firmId) {
     // Create new call record
     console.log('[Upsert Call] Creating new call record for firmId:', firmId);
+    
+    // Get firm's phone number for to_number
+    const { data: firmData } = await supabase
+      .from('firms')
+      .select('vapi_phone_number')
+      .eq('id', firmId)
+      .single();
+    
+    const toNumber = (firmData as any)?.vapi_phone_number || '';
+    
     const { data: newCall, error: insertError } = await supabase
       .from('calls')
       // @ts-ignore
@@ -58,7 +68,7 @@ export async function upsertCall({
         urgency: intake?.urgency_level === 'high' ? 'high' : intake?.emergency_redirected ? 'emergency_redirected' : 'normal',
         started_at: new Date().toISOString(),
         from_number: '', // Will be updated in finalizeCall
-        to_number: '', // Will be updated in finalizeCall
+        to_number: toNumber,
         route_reason: 'after_hours', // Default for Vapi calls
       })
       .select()
@@ -66,11 +76,14 @@ export async function upsertCall({
     
     if (insertError) {
       console.error('[Upsert Call] Error creating call:', insertError);
+      console.error('[Upsert Call] Insert error details:', JSON.stringify(insertError, null, 2));
     } else {
       console.log('[Upsert Call] Call created successfully:', newCall);
     }
   } else {
     console.warn('[Upsert Call] No firmId provided and no existing call found. Cannot create call record.');
+    console.warn('[Upsert Call] Conversation ID:', conversationId);
+    console.warn('[Upsert Call] This means the webhook could not find the firm. Check server logs for firm lookup errors.');
   }
 }
 
@@ -105,6 +118,15 @@ export async function finalizeCall({
   if (callError || !callData) {
     console.warn('[Finalize Call] Call not found, creating it now');
     if (firmId) {
+      // Get firm's phone number for to_number
+      const { data: firmData } = await supabase
+        .from('firms')
+        .select('vapi_phone_number')
+        .eq('id', firmId)
+        .single();
+      
+      const toNumber = (firmData as any)?.vapi_phone_number || '';
+      
       const { data: newCall, error: createError } = await supabase
         .from('calls')
         // @ts-ignore
@@ -112,7 +134,7 @@ export async function finalizeCall({
           vapi_conversation_id: conversationId,
           firm_id: firmId,
           from_number: phoneNumber || '',
-          to_number: '', // Vapi phone number - will be looked up from firm
+          to_number: toNumber,
           status: 'summarizing',
           urgency: 'normal',
           started_at: new Date().toISOString(), // Approximate
@@ -126,6 +148,8 @@ export async function finalizeCall({
         return;
       }
       
+      console.log('[Finalize Call] Call created successfully:', newCall);
+      
       // Use the newly created call
       const call = newCall as any;
       const intake = (call.intake_json as IntakeData) || {};
@@ -133,7 +157,8 @@ export async function finalizeCall({
       // Continue with finalization
       await finalizeCallRecord(supabase, call, intake, transcript, phoneNumber);
     } else {
-      console.error('[Finalize Call] Cannot create call - no firmId provided');
+      console.error('[Finalize Call] Cannot create call - no firmId provided. Conversation ID:', conversationId);
+      console.error('[Finalize Call] This means the webhook could not find the firm. Check server logs for firm lookup errors.');
       return;
     }
   } else {

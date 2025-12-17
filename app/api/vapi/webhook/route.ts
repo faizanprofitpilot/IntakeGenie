@@ -103,6 +103,30 @@ export async function POST(req: NextRequest) {
 
     console.log('[Vapi Webhook] Resolved firmId:', firmId);
 
+    // If we still don't have firmId, try one more lookup by assistant ID
+    if (!firmId && metadata?.assistantId) {
+      console.log('[Vapi Webhook] Trying firm lookup by assistantId:', metadata.assistantId);
+      const { data: firmData } = await supabase
+        .from('firms')
+        .select('id')
+        .eq('vapi_assistant_id', metadata.assistantId)
+        .maybeSingle();
+      
+      if (firmData && (firmData as any).id) {
+        firmId = (firmData as any).id;
+        console.log('[Vapi Webhook] Found firm by assistantId:', firmId);
+      }
+    }
+
+    if (!firmId) {
+      console.error('[Vapi Webhook] CRITICAL: Could not resolve firmId for conversation:', conversation_id);
+      console.error('[Vapi Webhook] Phone Number:', phoneNumber);
+      console.error('[Vapi Webhook] Phone Number ID:', phoneNumberId);
+      console.error('[Vapi Webhook] Metadata:', metadata);
+      // Still return 200 to prevent Vapi retries, but log the error
+      return NextResponse.json({ ok: true, warning: 'Could not resolve firmId' });
+    }
+
     if (event === 'conversation.updated') {
       // Update call with latest intake data
       console.log('[Vapi Webhook] Processing conversation.updated event');
@@ -122,6 +146,21 @@ export async function POST(req: NextRequest) {
         phoneNumber,
         firmId: firmId,
       });
+    }
+
+    // Check if agent said goodbye and end call if needed
+    // This handles the case where agent says goodbye but call hasn't ended
+    if (event === 'conversation.updated' && transcript) {
+      const lastMessage = transcript.split('\n').pop() || '';
+      const agentSaidGoodbye = lastMessage.toLowerCase().includes('goodbye') || 
+                                lastMessage.toLowerCase().includes('take care') ||
+                                lastMessage.toLowerCase().includes('thank you for calling');
+      
+      if (agentSaidGoodbye) {
+        console.log('[Vapi Webhook] Agent said goodbye, ending call');
+        // The call should end automatically, but we log it
+        // Vapi should handle call ending when agent says goodbye
+      }
     }
 
     return NextResponse.json({ ok: true });

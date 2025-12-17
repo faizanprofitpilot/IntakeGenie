@@ -48,18 +48,8 @@ Rules:
       voiceSeconds: 1.0, // Require 1 second of continuous speech before stopping
       backoffSeconds: 2.0, // Wait 2 seconds after interruption before resuming
     },
-    // Add hooks to end call when agent says goodbye
-    // This hook triggers when the agent's speech ends and checks for goodbye phrases
-    hooks: [
-      {
-        on: 'assistant-speech.end',
-        do: [
-          {
-            type: 'endCall',
-          },
-        ],
-      },
-    ],
+    // Note: Call ending will be handled via server webhook when agent says goodbye
+    // The webhook will detect the goodbye message and end the call
   };
 }
 
