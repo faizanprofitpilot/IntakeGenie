@@ -73,6 +73,9 @@ export async function POST(req: NextRequest) {
         server: {
           url: webhookUrl,
         },
+        metadata: {
+          firmId: firmId,
+        },
       };
       
       // Add stopSpeakingPlan to prevent interruptions
@@ -112,23 +115,16 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    // Step 1: Create phone number with provider and assistant/server in one request
-    // For Vapi free numbers, we can include assistantId and server in the initial creation
+    // Step 1: Create phone number with provider and assistantId (per Vapi docs)
+    // The webhook URL is already set on the assistant, so we don't need to set it on the phone number
     let phoneResponse;
     let phoneNumberId: string;
     try {
-      console.log('[Vapi Provision] Creating phone number with provider, assistant, and server...');
+      console.log('[Vapi Provision] Creating phone number with provider and assistantId...');
       const phonePayload: any = {
         provider: 'vapi', // Use Vapi's free phone number service
         assistantId: assistantId,
       };
-      
-      // Include server URL if provided
-      if (webhookUrl) {
-        phonePayload.server = {
-          url: webhookUrl,
-        };
-      }
       
       phoneResponse = await vapi.post('/phone-number', phonePayload);
       console.log('[Vapi Provision] Phone number created:', phoneResponse.data);
@@ -157,16 +153,12 @@ export async function POST(req: NextRequest) {
           phoneNumberId = phoneResponse.data.id;
           console.log('[Vapi Provision] Phone number created without assistant:', phoneResponse.data);
           
-          // Now try to update with assistant and server
+          // Now try to update with assistant (webhook is already on assistant)
           if (phoneNumberId) {
             try {
               await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-              const updatePayload: any = { assistantId: assistantId };
-              if (webhookUrl) {
-                updatePayload.server = { url: webhookUrl };
-              }
-              await vapi.patch(`/phone-number/${phoneNumberId}`, updatePayload);
-              console.log('[Vapi Provision] Phone number updated with assistant and server');
+              await vapi.patch(`/phone-number/${phoneNumberId}`, { assistantId: assistantId });
+              console.log('[Vapi Provision] Phone number updated with assistant');
             } catch (updateError: any) {
               console.warn('[Vapi Provision] Could not update phone number with assistant:', updateError?.response?.data || updateError?.message);
               // Continue - phone number is created, can be configured later

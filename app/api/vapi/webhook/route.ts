@@ -30,58 +30,70 @@ export async function POST(req: NextRequest) {
       phoneNumber,
       metadata,
       phoneNumberId,
+      phoneNumber: phoneNumberAlt, // Sometimes it's nested differently
     } = body;
 
-    console.log('[Vapi Webhook] Event:', event, 'Conversation ID:', conversation_id, 'Phone Number:', phoneNumber, 'Phone Number ID:', phoneNumberId, 'Metadata:', metadata);
+    // Extract phone number from various possible locations
+    const actualPhoneNumber = phoneNumber || phoneNumberAlt || body.phoneNumber?.number || body.phoneNumber;
+    const actualPhoneNumberId = phoneNumberId || body.phoneNumber?.id || body.phoneNumberId;
+
+    console.log('[Vapi Webhook] Event:', event);
+    console.log('[Vapi Webhook] Conversation ID:', conversation_id);
+    console.log('[Vapi Webhook] Phone Number:', actualPhoneNumber);
+    console.log('[Vapi Webhook] Phone Number ID:', actualPhoneNumberId);
+    console.log('[Vapi Webhook] Metadata:', JSON.stringify(metadata, null, 2));
+    console.log('[Vapi Webhook] Full body:', JSON.stringify(body, null, 2));
 
     const supabase = createServiceClient();
 
-    // Look up firm by phone number ID or phone number if not provided in metadata
-    let firmId = metadata?.firmId;
+    // Look up firm by metadata first (most reliable)
+    let firmId = metadata?.firmId || body.metadata?.firmId;
+    
     if (!firmId) {
-      if (phoneNumberId) {
-        // Look up by phone number ID (stored in vapi_phone_number field)
+      // Try to extract from phoneNumber object if it exists
+      if (actualPhoneNumberId) {
+        // Look up by phone number ID (stored in vapi_phone_number field, might be a placeholder)
         const { data: firmData, error: lookupError } = await supabase
           .from('firms')
-          .select('id, vapi_phone_number')
-          .or(`vapi_phone_number.eq.${phoneNumberId},vapi_phone_number.ilike.%${phoneNumberId}%`)
+          .select('id, vapi_phone_number, vapi_assistant_id')
+          .or(`vapi_phone_number.eq.${actualPhoneNumberId},vapi_phone_number.ilike.%${actualPhoneNumberId}%`)
           .limit(1)
           .maybeSingle();
         
-        console.log('[Vapi Webhook] Firm lookup by phoneNumberId:', phoneNumberId, 'Result:', firmData, 'Error:', lookupError);
+        console.log('[Vapi Webhook] Firm lookup by phoneNumberId:', actualPhoneNumberId, 'Result:', firmData, 'Error:', lookupError);
         
         if (firmData && (firmData as any).id) {
           firmId = (firmData as any).id;
           
           // If we have the actual phone number from webhook and firm only has ID stored, update it
-          if (phoneNumber && phoneNumber.match(/^\+?[1-9]\d{1,14}$/) && 
+          if (actualPhoneNumber && actualPhoneNumber.match(/^\+?[1-9]\d{1,14}$/) && 
               (firmData as any).vapi_phone_number && 
               !(firmData as any).vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/)) {
-            console.log('[Vapi Webhook] Updating firm with actual phone number from webhook:', phoneNumber);
+            console.log('[Vapi Webhook] Updating firm with actual phone number from webhook:', actualPhoneNumber);
             await supabase
               .from('firms')
               // @ts-ignore
-              .update({ vapi_phone_number: phoneNumber })
+              .update({ vapi_phone_number: actualPhoneNumber })
               .eq('id', firmId);
           }
         }
       }
       
       // Fallback: look up by phone number if we have it
-      if (!firmId && phoneNumber) {
+      if (!firmId && actualPhoneNumber) {
         const { data: firmData, error: phoneLookupError } = await supabase
           .from('firms')
           .select('id')
-          .eq('vapi_phone_number', phoneNumber)
+          .eq('vapi_phone_number', actualPhoneNumber)
           .maybeSingle();
         
-        console.log('[Vapi Webhook] Firm lookup by phoneNumber:', phoneNumber, 'Result:', firmData, 'Error:', phoneLookupError);
+        console.log('[Vapi Webhook] Firm lookup by phoneNumber:', actualPhoneNumber, 'Result:', firmData, 'Error:', phoneLookupError);
         
         if (firmData && (firmData as any).id) {
           firmId = (firmData as any).id;
         }
       }
-    } else if (phoneNumber && phoneNumber.match(/^\+?[1-9]\d{1,14}$/)) {
+    } else if (actualPhoneNumber && actualPhoneNumber.match(/^\+?[1-9]\d{1,14}$/)) {
       // If we have firmId and actual phone number, check if we need to update the stored number
       const { data: firmData } = await supabase
         .from('firms')
@@ -92,11 +104,11 @@ export async function POST(req: NextRequest) {
       if (firmData && (firmData as any).vapi_phone_number && 
           !(firmData as any).vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/)) {
         // Firm has ID stored but we have actual number - update it
-        console.log('[Vapi Webhook] Updating firm with actual phone number from webhook:', phoneNumber);
+        console.log('[Vapi Webhook] Updating firm with actual phone number from webhook:', actualPhoneNumber);
         await supabase
           .from('firms')
           // @ts-ignore
-          .update({ vapi_phone_number: phoneNumber })
+          .update({ vapi_phone_number: actualPhoneNumber })
           .eq('id', firmId);
       }
     }
@@ -104,25 +116,29 @@ export async function POST(req: NextRequest) {
     console.log('[Vapi Webhook] Resolved firmId:', firmId);
 
     // If we still don't have firmId, try one more lookup by assistant ID
-    if (!firmId && metadata?.assistantId) {
-      console.log('[Vapi Webhook] Trying firm lookup by assistantId:', metadata.assistantId);
-      const { data: firmData } = await supabase
-        .from('firms')
-        .select('id')
-        .eq('vapi_assistant_id', metadata.assistantId)
-        .maybeSingle();
-      
-      if (firmData && (firmData as any).id) {
-        firmId = (firmData as any).id;
-        console.log('[Vapi Webhook] Found firm by assistantId:', firmId);
+    if (!firmId) {
+      const assistantId = metadata?.assistantId || body.assistantId || body.assistant?.id;
+      if (assistantId) {
+        console.log('[Vapi Webhook] Trying firm lookup by assistantId:', assistantId);
+        const { data: firmData } = await supabase
+          .from('firms')
+          .select('id')
+          .eq('vapi_assistant_id', assistantId)
+          .maybeSingle();
+        
+        if (firmData && (firmData as any).id) {
+          firmId = (firmData as any).id;
+          console.log('[Vapi Webhook] Found firm by assistantId:', firmId);
+        }
       }
     }
 
     if (!firmId) {
       console.error('[Vapi Webhook] CRITICAL: Could not resolve firmId for conversation:', conversation_id);
-      console.error('[Vapi Webhook] Phone Number:', phoneNumber);
-      console.error('[Vapi Webhook] Phone Number ID:', phoneNumberId);
-      console.error('[Vapi Webhook] Metadata:', metadata);
+      console.error('[Vapi Webhook] Phone Number:', actualPhoneNumber);
+      console.error('[Vapi Webhook] Phone Number ID:', actualPhoneNumberId);
+      console.error('[Vapi Webhook] Metadata:', JSON.stringify(metadata, null, 2));
+      console.error('[Vapi Webhook] Full body keys:', Object.keys(body));
       // Still return 200 to prevent Vapi retries, but log the error
       return NextResponse.json({ ok: true, warning: 'Could not resolve firmId' });
     }
@@ -142,8 +158,8 @@ export async function POST(req: NextRequest) {
       console.log('[Vapi Webhook] Processing conversation.completed event');
       await finalizeCall({
         conversationId: conversation_id,
-        transcript,
-        phoneNumber,
+        transcript: transcript || body.transcript,
+        phoneNumber: actualPhoneNumber,
         firmId: firmId,
       });
     }

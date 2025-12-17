@@ -71,6 +71,9 @@ export async function POST(req: NextRequest) {
           server: {
             url: webhookUrl,
           },
+          metadata: {
+            firmId: firmId,
+          },
         };
         
         // Add stopSpeakingPlan to prevent interruptions
@@ -108,20 +111,10 @@ export async function POST(req: NextRequest) {
       
       console.log('[Link Number] Extracted number:', phoneNumber);
       
-      // Update phone number to assign assistant and server
-      const updatePayload: any = {
-        assistantId: assistantId,
-      };
-      
-      if (webhookUrl) {
-        updatePayload.server = {
-          url: webhookUrl,
-        };
-      }
-      
-      console.log('[Link Number] Updating phone number with payload:', JSON.stringify(updatePayload, null, 2));
-      await vapi.patch(`/phone-number/${phoneNumberId}`, updatePayload);
-      console.log('[Link Number] Phone number updated with assistant and server');
+      // Update phone number to assign assistant (webhook is already on assistant)
+      console.log('[Link Number] Updating phone number with assistantId:', assistantId);
+      await vapi.patch(`/phone-number/${phoneNumberId}`, { assistantId: assistantId });
+      console.log('[Link Number] Phone number updated with assistant');
       
     } catch (vapiError: any) {
       const errorDetails = vapiError?.response?.data || vapiError?.message || vapiError;
