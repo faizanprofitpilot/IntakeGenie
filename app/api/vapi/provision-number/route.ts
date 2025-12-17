@@ -108,59 +108,77 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    // Step 1: Create phone number with provider
+    // Step 1: Create phone number with provider and assistant/server in one request
+    // For Vapi free numbers, we can include assistantId and server in the initial creation
     let phoneResponse;
+    let phoneNumberId: string;
     try {
-      console.log('[Vapi Provision] Creating phone number with provider...');
-      phoneResponse = await vapi.post('/phone-number', {
+      console.log('[Vapi Provision] Creating phone number with provider, assistant, and server...');
+      const phonePayload: any = {
         provider: 'vapi', // Use Vapi's free phone number service
-      });
-      console.log('[Vapi Provision] Phone number created:', phoneResponse.data);
-    } catch (vapiError: any) {
-      console.error('[Vapi Provision] Phone number creation error:', vapiError?.response?.data || vapiError?.message || vapiError);
-      return NextResponse.json({ 
-        error: 'Failed to provision phone number',
-        details: vapiError?.response?.data || vapiError?.message || 'Unknown error'
-      }, { status: 500 });
-    }
-
-    const phoneNumberId = phoneResponse.data.id;
-    if (!phoneNumberId) {
-      console.error('[Vapi Provision] No phone number ID in response:', phoneResponse.data);
-      return NextResponse.json({ 
-        error: 'Failed to provision number',
-        details: 'No phone number ID returned',
-        response: phoneResponse.data
-      }, { status: 500 });
-    }
-
-    // Step 2: Update phone number to assign assistant and server URL
-    // Note: Only update assistantId and server - do NOT include phone number field
-    let updateResponse;
-    try {
-      console.log('[Vapi Provision] Updating phone number to assign assistant and server...');
-      const updatePayload: any = {
         assistantId: assistantId,
       };
       
-      // Only include server if webhookUrl is provided
+      // Include server URL if provided
       if (webhookUrl) {
-        updatePayload.server = {
+        phonePayload.server = {
           url: webhookUrl,
         };
       }
       
-      updateResponse = await vapi.patch(`/phone-number/${phoneNumberId}`, updatePayload);
-      console.log('[Vapi Provision] Phone number updated:', updateResponse.data);
+      phoneResponse = await vapi.post('/phone-number', phonePayload);
+      console.log('[Vapi Provision] Phone number created:', phoneResponse.data);
+      phoneNumberId = phoneResponse.data.id;
+      
+      if (!phoneNumberId) {
+        console.error('[Vapi Provision] No phone number ID in response:', phoneResponse.data);
+        return NextResponse.json({ 
+          error: 'Failed to provision number',
+          details: 'No phone number ID returned',
+          response: phoneResponse.data
+        }, { status: 500 });
+      }
     } catch (vapiError: any) {
       const errorDetails = vapiError?.response?.data || vapiError?.message || vapiError;
-      console.error('[Vapi Provision] Phone number update error:', errorDetails);
+      console.error('[Vapi Provision] Phone number creation error:', errorDetails);
       console.error('[Vapi Provision] Full error response:', JSON.stringify(errorDetails, null, 2));
       
-      // If the error is about phone number format, it might be a Vapi API issue
-      // Continue anyway - phone number is created, assistant can be assigned later
-      if (errorDetails?.message?.includes('phone number')) {
-        console.warn('[Vapi Provision] Phone number format error - this may be a Vapi API issue. Phone number created but not fully configured.');
+      // If creation with assistant fails, try creating without assistant first
+      if (errorDetails?.message?.includes('phone number') || errorDetails?.statusCode === 400) {
+        console.log('[Vapi Provision] Retrying phone number creation without assistant/server...');
+        try {
+          phoneResponse = await vapi.post('/phone-number', {
+            provider: 'vapi',
+          });
+          phoneNumberId = phoneResponse.data.id;
+          console.log('[Vapi Provision] Phone number created without assistant:', phoneResponse.data);
+          
+          // Now try to update with assistant and server
+          if (phoneNumberId) {
+            try {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+              const updatePayload: any = { assistantId: assistantId };
+              if (webhookUrl) {
+                updatePayload.server = { url: webhookUrl };
+              }
+              await vapi.patch(`/phone-number/${phoneNumberId}`, updatePayload);
+              console.log('[Vapi Provision] Phone number updated with assistant and server');
+            } catch (updateError: any) {
+              console.warn('[Vapi Provision] Could not update phone number with assistant:', updateError?.response?.data || updateError?.message);
+              // Continue - phone number is created, can be configured later
+            }
+          }
+        } catch (retryError: any) {
+          return NextResponse.json({ 
+            error: 'Failed to provision phone number',
+            details: retryError?.response?.data || retryError?.message || 'Unknown error'
+          }, { status: 500 });
+        }
+      } else {
+        return NextResponse.json({ 
+          error: 'Failed to provision phone number',
+          details: errorDetails
+        }, { status: 500 });
       }
     }
 
