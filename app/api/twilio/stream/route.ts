@@ -1,7 +1,7 @@
 // This endpoint is for Media Streams (future enhancement)
 // For MVP, we use Gather instead, so this is a placeholder
 import { NextRequest, NextResponse } from 'next/server';
-import { generateTwiML, getTTSAudioUrl } from '@/lib/clients/twilio';
+import { generateTwiML, getTTSAudioUrl, normalizeAppUrl, twilioClient } from '@/lib/clients/twilio';
 import { twiml } from 'twilio';
 
 // Ensure this route is public (no authentication required)
@@ -65,6 +65,21 @@ async function generateNoInput(response: twiml.VoiceResponse, callSid: string | 
   }
 }
 
+// Helper function to start recording via Twilio API
+async function startCallRecording(callSid: string) {
+  try {
+    // Start recording on the call - records the entire call
+    // Using create() with empty params to start basic recording
+    // The recording will be available after the call ends and can be fetched via process-call
+    const recording = await twilioClient.calls(callSid).recordings.create({});
+    console.log(`[Stream] Started recording for call ${callSid}, recording SID: ${recording.sid}`);
+  } catch (error) {
+    console.error(`[Stream] Error starting recording for call ${callSid}:`, error);
+    // Don't throw - recording failure shouldn't break the call flow
+    // We can still fetch recordings later via process-call
+  }
+}
+
 // Twilio's <Redirect> defaults to POST, so we must support POST
 export async function POST(request: NextRequest) {
   console.log('[Twilio Stream] POST request received');
@@ -73,6 +88,14 @@ export async function POST(request: NextRequest) {
   const firmId = request.nextUrl.searchParams.get('firmId');
 
   console.log('[Twilio Stream] CallSid:', callSid, 'FirmId:', firmId);
+
+  // Start recording the call via Twilio API (non-blocking)
+  if (callSid) {
+    // Fire and forget - start recording asynchronously
+    startCallRecording(callSid).catch((err) => {
+      console.error('[Stream] Recording start failed:', err);
+    });
+  }
 
   // Fetch firm data if firmId is provided
   let firmName: string | null = null;
@@ -98,9 +121,7 @@ export async function POST(request: NextRequest) {
   // Start with greeting - use premium TTS
   await generateGreeting(response, callSid, firmName, customGreeting);
 
-  // Start gathering with recording
-  // Note: For MVP, we'll record via status callback from Twilio
-  // Recording is configured on the Dial in voice route, or we can add Record here
+  // Start gathering with speech recognition
   response.gather({
     input: ['speech'] as any,
     action: `/api/twilio/gather?callSid=${callSid}&firmId=${firmId}`,
@@ -123,6 +144,14 @@ export async function GET(request: NextRequest) {
   const callSid = request.nextUrl.searchParams.get('callSid');
   const firmId = request.nextUrl.searchParams.get('firmId');
 
+  // Start recording the call via Twilio API (non-blocking)
+  if (callSid) {
+    // Fire and forget - start recording asynchronously
+    startCallRecording(callSid).catch((err) => {
+      console.error('[Stream] Recording start failed:', err);
+    });
+  }
+
   // Fetch firm data if firmId is provided
   let firmName: string | null = null;
   let customGreeting: string | null = null;
@@ -147,9 +176,7 @@ export async function GET(request: NextRequest) {
   // Start with greeting - use premium TTS
   await generateGreeting(response, callSid, firmName, customGreeting);
 
-  // Start gathering with recording
-  // Note: For MVP, we'll record via status callback from Twilio
-  // Recording is configured on the Dial in voice route, or we can add Record here
+  // Start gathering with speech recognition
   response.gather({
     input: ['speech'] as any,
     action: `/api/twilio/gather?callSid=${callSid}&firmId=${firmId}`,
