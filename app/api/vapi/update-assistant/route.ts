@@ -76,6 +76,10 @@ export async function POST(req: NextRequest) {
       firm.ai_knowledge_base
     );
 
+    // Log tone being applied
+    console.log('[Update Assistant] Firm tone setting:', firm.ai_tone);
+    console.log('[Update Assistant] System prompt includes tone:', agentConfig.model.messages[0]?.content?.includes('Communication style:') || false);
+
     // Update assistant with new configuration
     // Vapi PATCH: Include all fields that should be updated
     // According to Vapi docs, when updating nested objects, include the complete object

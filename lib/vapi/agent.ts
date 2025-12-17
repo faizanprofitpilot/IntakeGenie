@@ -31,6 +31,11 @@ Rules:
 - End the call by saying: "Thank you. I've shared this with ${firmName}. Someone from the firm will review it and contact you within one business day. If this becomes urgent or you feel unsafe, please call 911. Take care. Goodbye."
 - After saying goodbye, the call will automatically end${toneGuidance}${aiKnowledgeBase ? `\n\nFirm context: ${aiKnowledgeBase}` : ''}`;
 
+  // Log tone configuration for debugging
+  if (aiTone) {
+    console.log(`[buildVapiAgent] Tone: ${aiTone}, Guidance: ${toneInstructions[aiTone] || 'none'}`);
+  }
+
   return {
     model: {
       provider: 'openai',
