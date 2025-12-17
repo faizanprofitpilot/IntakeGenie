@@ -101,16 +101,18 @@ export async function POST(request: NextRequest) {
 
     // Only update to transcribing if not already in that state (avoid race conditions)
     if (call.status !== 'transcribing' && call.status !== 'summarizing' && call.status !== 'emailed') {
-    await supabase
-      .from('calls')
-      // @ts-ignore - Supabase type inference issue
-      .update({ status: 'transcribing' })
-      // @ts-ignore - Supabase type inference issue
-      .eq('id', call.id);
+      await supabase
+        .from('calls')
+        // @ts-ignore - Supabase type inference issue
+        .update({ status: 'transcribing' })
+        // @ts-ignore - Supabase type inference issue
+        .eq('id', call.id);
     }
 
     let transcript = call.transcript_text;
     let recordingUrl = call.recording_url;
+
+    console.log(`[Process Call] Starting processing for call ${callSid}, current status: ${call.status}, has recording: ${!!recordingUrl}, has transcript: ${!!transcript}`);
 
     // If no recording URL, try to fetch from Twilio
     if (!recordingUrl) {
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
             // @ts-ignore - Supabase type inference issue
             .eq('id', call.id);
         } else {
-          console.log(`[Process Call] No recordings found for call ${callSid} - may need to wait for Twilio to process`);
+          console.warn(`[Process Call] No recordings found for call ${callSid} - call may not have been recorded. Will proceed without transcript.`);
         }
       } catch (error) {
         console.error('[Process Call] Error fetching recording from Twilio:', error);
@@ -180,8 +182,26 @@ export async function POST(request: NextRequest) {
     } else if (!recordingUrl && !transcript) {
       // If no recording and no transcript, skip to summary with what we have
       console.log('[Process Call] No recording available, proceeding with intake data only');
+      // Update status to summarizing since we're skipping transcription
+      await supabase
+        .from('calls')
+        // @ts-ignore - Supabase type inference issue
+        .update({ status: 'summarizing' })
+        // @ts-ignore - Supabase type inference issue
+        .eq('id', call.id);
     } else if (!transcript && recordingUrl) {
       console.log('[Process Call] Recording URL exists but transcript is missing - transcription may have failed previously');
+      // If we have a recording URL but no transcript, transcription likely failed
+      // Mark as error or proceed without transcript
+      await supabase
+        .from('calls')
+        // @ts-ignore - Supabase type inference issue
+        .update({ 
+          status: 'summarizing',
+          error_message: 'Recording exists but transcription unavailable - proceeding with intake data only'
+        })
+        // @ts-ignore - Supabase type inference issue
+        .eq('id', call.id);
     }
 
     // Generate summary (even if no transcript, use intake data)
