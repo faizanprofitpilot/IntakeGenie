@@ -154,31 +154,8 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
 
         if (updateError) throw updateError;
         
-        // Only provision number if firm doesn't have one yet
-        if (!firm.vapi_phone_number) {
-          try {
-            const provisionResponse = await fetch('/api/vapi/provision-number', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ firmId }),
-            });
-
-            if (!provisionResponse.ok) {
-              const errorData = await provisionResponse.json();
-              console.error('Error provisioning Vapi number:', errorData);
-              console.error('Error details:', errorData.details);
-              console.error('Error message:', errorData.message);
-              // Show user-friendly error
-              setError(errorData.message || errorData.error || 'Failed to provision number. Check console for details.');
-              // Don't throw - allow settings update to succeed
-            }
-          } catch (provisionError) {
-            console.error('Error calling provision-number API:', provisionError);
-            // Don't throw - allow settings update to succeed
-          }
-        }
+        // Phone number provisioning is now manual via the "Provision Phone Number" button
+        // No auto-provisioning on save
       } else {
         // Create new firm
         // @ts-ignore - Supabase type inference issue
@@ -193,31 +170,8 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
         const newFirm = newFirmData as any;
         firmId = newFirm.id;
 
-        // Automatically provision Vapi phone number for new firm
-        // The API endpoint will check and skip if number already exists
-        try {
-          const provisionResponse = await fetch('/api/vapi/provision-number', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ firmId }),
-          });
-
-          if (!provisionResponse.ok) {
-            const errorData = await provisionResponse.json();
-            console.error('Error provisioning Vapi number:', errorData);
-            console.error('Error details:', errorData.details);
-            console.error('Error message:', errorData.message);
-            // Show user-friendly error
-            setError(errorData.message || errorData.error || 'Failed to provision number. Check console for details.');
-            // Don't throw - allow firm creation to succeed even if number provision fails
-            // User can retry later via the provision button if needed
-          }
-        } catch (provisionError) {
-          console.error('Error calling provision-number API:', provisionError);
-          // Don't throw - allow firm creation to succeed
-        }
+        // Phone number provisioning is now manual via the "Provision Phone Number" button
+        // No auto-provisioning on firm creation
       }
 
       setSuccess(true);
@@ -265,6 +219,331 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-0">
+        {/* Phone Number Section - Show First */}
+        {firm && (
+          <section className="pb-8 border-b border-gray-200">
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-1" style={{ color: '#4A5D73' }}>
+                Phone Number
+              </h2>
+              <p className="text-sm" style={{ color: '#4A5D73', opacity: 0.7 }}>
+                Provision a phone number for your firm. Calls are handled by IntakeGenie's AI assistant.
+              </p>
+            </div>
+
+            <div className="space-y-5">
+              {/* Display current number if exists */}
+              {(firm.inbound_number_e164 || firm.vapi_phone_number || firm.twilio_number) && (
+                <div className="p-4 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: '#0B1F3B' }}>
+                        {firm.inbound_number_e164 || firm.vapi_phone_number || firm.twilio_number}
+                      </p>
+                      {firm.telephony_provider && (
+                        <p className="text-xs mt-1" style={{ color: '#4A5D73', opacity: 0.7 }}>
+                          Provider: {firm.telephony_provider === 'twilio_imported_into_vapi' ? 'Twilio + Vapi' : firm.telephony_provider}
+                        </p>
+                      )}
+                    </div>
+                    {firm.inbound_number_e164 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(firm.inbound_number_e164!);
+                          setSuccess(true);
+                          setTimeout(() => setSuccess(false), 2000);
+                        }}
+                        className="px-4 py-2 text-xs rounded-lg font-medium transition-all"
+                        style={{ backgroundColor: '#0B1F3B', color: '#FFFFFF' }}
+                      >
+                        Copy
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Provision new number */}
+              {!firm.inbound_number_e164 && !firm.vapi_phone_number_id && (
+                <div className="space-y-4">
+                  <div>
+                    <label 
+                      htmlFor="area_code" 
+                      className="block text-xs font-semibold uppercase tracking-wide mb-2"
+                      style={{ color: '#4A5D73' }}
+                    >
+                      Area Code (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      id="area_code"
+                      value={areaCode}
+                      onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                      placeholder="e.g., 415"
+                      className="w-full h-12 px-4 rounded-lg border text-sm"
+                      style={{
+                        borderColor: '#E5E7EB',
+                        backgroundColor: '#FFFFFF',
+                        color: '#0B1F3B',
+                      }}
+                      disabled={provisioning}
+                    />
+                    <p className="text-xs mt-1.5" style={{ color: '#4A5D73', opacity: 0.7 }}>
+                      Leave blank for any available number
+                    </p>
+                  </div>
+                  
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!supabase || !firm) return;
+                      
+                      setProvisioning(true);
+                      setLoading(true);
+                      setError(null);
+                      setSuccess(false);
+                      
+                      try {
+                        const response = await fetch('/api/telephony/provision', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ 
+                            firmId: firm.id,
+                            areaCode: areaCode || undefined,
+                          }),
+                        });
+
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                          let errorMsg = 'Failed to provision number';
+                          if (data.message) {
+                            errorMsg = Array.isArray(data.message) ? data.message.join(', ') : data.message;
+                          } else if (data.error) {
+                            errorMsg = data.error;
+                          } else if (data.details) {
+                            errorMsg = typeof data.details === 'string' ? data.details : JSON.stringify(data.details);
+                          }
+                          throw new Error(errorMsg);
+                        }
+
+                        setSuccess(true);
+                        setAreaCode('');
+                        setTimeout(() => {
+                          setSuccess(false);
+                          onSave();
+                        }, 2000);
+                      } catch (err: any) {
+                        console.error('Error provisioning number:', err);
+                        setError(err.message || 'Failed to provision number. Check browser console for details.');
+                      } finally {
+                        setLoading(false);
+                        setProvisioning(false);
+                      }
+                    }}
+                    disabled={loading || provisioning}
+                    className="h-12 px-6 rounded-lg font-semibold text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      backgroundColor: (loading || provisioning) ? '#4A5D73' : '#0B1F3B',
+                      color: '#FFFFFF',
+                    }}
+                  >
+                    {loading || provisioning ? 'Provisioning...' : 'Provision Phone Number'}
+                  </button>
+                </div>
+              )}
+
+              {/* Refresh button for existing numbers */}
+              {firm.vapi_phone_number_id && !firm.inbound_number_e164 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!supabase || !firm) return;
+                      
+                      setLoading(true);
+                      setError(null);
+                      
+                      try {
+                        const response = await fetch(`/api/telephony/refresh-number?firmId=${firm.id}`);
+
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                          throw new Error(data.error || 'Failed to refresh number');
+                        }
+
+                        if (data.phoneNumber) {
+                          setSuccess(true);
+                          setTimeout(() => {
+                            setSuccess(false);
+                            onSave();
+                          }, 2000);
+                        } else {
+                          setError('Number not yet assigned');
+                        }
+                      } catch (err: any) {
+                        console.error('Error refreshing number:', err);
+                        setError(err.message || 'Failed to refresh number');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="h-10 px-4 rounded-lg font-semibold text-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ backgroundColor: '#4A5D73', color: '#FFFFFF' }}
+                  >
+                    {loading ? 'Refreshing...' : 'Refresh Number from Vapi'}
+                  </button>
+                </div>
+              )}
+
+              {/* Link Existing Phone Number */}
+              <div className="mt-4 p-3 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#4A5D73' }}>
+                  Link Existing Vapi Phone Number
+                </p>
+                <p className="text-xs mb-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
+                  If you have a phone number already in Vapi (e.g., imported from Twilio), enter its ID to link it to this firm.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="link_phone_number_id"
+                    placeholder="Enter Vapi phone number ID"
+                    className="flex-1 h-10 px-3 rounded-lg border text-sm"
+                    style={{
+                      borderColor: '#E5E7EB',
+                      backgroundColor: '#FFFFFF',
+                    }}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter' && !loading) {
+                        const phoneNumberId = (e.target as HTMLInputElement).value.trim();
+                        if (!phoneNumberId || !supabase || !firm) return;
+                        
+                        setLoading(true);
+                        setError(null);
+                        
+                        try {
+                          const response = await fetch('/api/vapi/link-number', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ 
+                              firmId: firm.id,
+                              phoneNumberId: phoneNumberId
+                            }),
+                          });
+
+                          const data = await response.json();
+                          
+                          if (!response.ok) {
+                            throw new Error(data.error || data.details || 'Failed to link number');
+                          }
+
+                          setSuccess(true);
+                          (e.target as HTMLInputElement).value = '';
+                          setTimeout(() => {
+                            setSuccess(false);
+                            onSave();
+                          }, 2000);
+                        } catch (err: any) {
+                          console.error('Error linking number:', err);
+                          setError(err.message || 'Failed to link number. Check browser console for details.');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!supabase || !firm) return;
+                      
+                      const input = document.getElementById('link_phone_number_id') as HTMLInputElement;
+                      const phoneNumberId = input?.value.trim();
+                      
+                      if (!phoneNumberId) {
+                        setError('Please enter a phone number ID');
+                        return;
+                      }
+                      
+                      setLoading(true);
+                      setError(null);
+                      
+                      try {
+                        const response = await fetch('/api/vapi/link-number', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ 
+                            firmId: firm.id,
+                            phoneNumberId: phoneNumberId
+                          }),
+                        });
+
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                          console.error('Link number error response:', data);
+                          
+                          let errorMsg = 'Failed to link number';
+                          if (data.message && Array.isArray(data.message)) {
+                            errorMsg = data.message.join(', ');
+                          } else if (data.message && typeof data.message === 'string') {
+                            errorMsg = data.message;
+                          } else if (data.error) {
+                            errorMsg = data.error;
+                          } else if (data.details) {
+                            if (typeof data.details === 'object' && data.details.message) {
+                              errorMsg = Array.isArray(data.details.message) 
+                                ? data.details.message.join(', ')
+                                : data.details.message;
+                            } else {
+                              errorMsg = JSON.stringify(data.details);
+                            }
+                          }
+                          
+                          throw new Error(errorMsg);
+                        }
+
+                        setSuccess(true);
+                        input.value = '';
+                        setTimeout(() => {
+                          setSuccess(false);
+                          onSave();
+                        }, 2000);
+                      } catch (err: any) {
+                        console.error('Error linking number:', err);
+                        setError(err.message || 'Failed to link number. Check browser console for details.');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="h-10 px-4 rounded-lg font-semibold text-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    style={{
+                      backgroundColor: loading ? '#4A5D73' : '#0B1F3B',
+                      color: '#FFFFFF',
+                    }}
+                  >
+                    Link Number
+                  </button>
+                </div>
+                <p className="text-xs mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
+                  Find the phone number ID in the Vapi dashboard URL: <code className="bg-gray-200 px-1 rounded">/phone-numbers/[ID]</code>
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Firm Information Section */}
         <section className="pb-8 border-b border-gray-200 last:border-b-0">
           <div className="mb-6">
@@ -413,355 +692,6 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
           ))}
         </select>
       </div>
-
-            {/* Vapi Phone Number */}
-            {firm && (
-      <div>
-                <label 
-                  htmlFor="vapi_phone_number" 
-                  className="block text-xs font-semibold uppercase tracking-wide mb-2"
-                  style={{ color: '#4A5D73' }}
-                >
-                  Phone Number
-          </label>
-                {!firm.inbound_number_e164 && !firm.vapi_phone_number_id && (
-                  <div className="space-y-3">
-                    <div>
-                      <label 
-                        htmlFor="area_code" 
-                        className="block text-xs font-medium mb-1.5"
-                        style={{ color: '#4A5D73' }}
-                      >
-                        Area Code (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        id="area_code"
-                        value={areaCode}
-                        onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                        placeholder="e.g., 415"
-                        className="w-full h-10 px-3 rounded-lg border text-sm"
-                        style={{
-                          borderColor: '#E5E7EB',
-                          backgroundColor: '#FFFFFF',
-                        }}
-                        disabled={provisioning}
-                      />
-                      <p className="text-xs mt-1" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                        Leave blank for any available number
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {!firm.inbound_number_e164 && !firm.vapi_phone_number_id && (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!supabase || !firm) return;
-                        
-                        setProvisioning(true);
-                        setLoading(true);
-                        setError(null);
-                        
-                        try {
-                          const response = await fetch('/api/telephony/provision', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ 
-                              firmId: firm.id,
-                              areaCode: areaCode || undefined,
-                            }),
-                          });
-
-                          const data = await response.json();
-                          
-                          if (!response.ok) {
-                            // Extract error message - handle array format
-                            let errorMsg = 'Failed to provision number';
-                            if (data.message) {
-                              if (Array.isArray(data.message)) {
-                                errorMsg = data.message.join(', ');
-                              } else {
-                                errorMsg = data.message;
-                              }
-                            } else if (data.error) {
-                              errorMsg = data.error;
-                            } else if (data.details) {
-                              errorMsg = typeof data.details === 'string' ? data.details : JSON.stringify(data.details);
-                            }
-                            console.error('Provision error details:', data);
-                            throw new Error(errorMsg);
-                          }
-
-                          setSuccess(true);
-                          setAreaCode('');
-                          setTimeout(() => {
-                            setSuccess(false);
-                            onSave();
-                          }, 2000);
-                        } catch (err: any) {
-                          console.error('Error provisioning number:', err);
-                          setError(err.message || 'Failed to provision number. Check browser console for details.');
-                        } finally {
-                          setLoading(false);
-                          setProvisioning(false);
-                        }
-                      }}
-                      disabled={loading || provisioning}
-                      className="h-12 px-6 rounded-lg font-semibold text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        backgroundColor: (loading || provisioning) ? '#4A5D73' : '#0B1F3B',
-                        color: '#FFFFFF',
-                      }}
-                    >
-                      {loading || provisioning ? 'Provisioning...' : 'Provision Phone Number'}
-                    </button>
-                  </div>
-                )}
-                <p className="mt-1.5 text-xs" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                  Each firm is assigned a dedicated AI intake number automatically. Calls to this number are handled by IntakeGenie.
-                </p>
-                {(firm.inbound_number_e164 || firm.vapi_phone_number || firm.twilio_number) && (
-                  <div className="mt-2">
-                    {firm.inbound_number_e164 ? (
-                      <div className="flex items-center justify-between p-2 rounded border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
-                        <p className="text-sm font-semibold" style={{ color: '#0B1F3B' }}>
-                          {firm.inbound_number_e164}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(firm.inbound_number_e164!);
-                            setSuccess(true);
-                            setTimeout(() => setSuccess(false), 2000);
-                          }}
-                          className="px-3 py-1 text-xs rounded font-medium"
-                          style={{ backgroundColor: '#0B1F3B', color: '#FFFFFF' }}
-                        >
-                          Copy
-                        </button>
-                      </div>
-                    ) : firm.vapi_phone_number && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/) ? (
-                      <p className="text-sm font-medium" style={{ color: '#0B1F3B' }}>
-                        Current number: {firm.vapi_phone_number}
-                      </p>
-                    ) : firm.vapi_phone_number ? (
-                      <div>
-                        <p className="text-sm font-medium" style={{ color: '#0B1F3B' }}>
-                          Phone number is being assigned...
-                        </p>
-                        <p className="text-xs mt-1" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                          Vapi free phone numbers are assigned asynchronously. The number will appear here automatically after the first call, or you can check the Vapi dashboard.
-                        </p>
-                        <a
-                          href="https://dashboard.vapi.ai/phone-numbers"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-1 text-xs text-blue-600 hover:underline block"
-                        >
-                          View in Vapi Dashboard →
-                        </a>
-                      </div>
-                    ) : (
-                      <p className="text-sm font-medium" style={{ color: '#0B1F3B' }}>
-                        Current number: {firm.twilio_number}
-                      </p>
-                    )}
-                    {firm.vapi_phone_number && (firm.vapi_phone_number.includes('ID:') || firm.vapi_phone_number.includes('Dashboard') || firm.vapi_phone_number.includes('Pending')) && (
-                      <div className="mt-2">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!supabase || !firm) return;
-                            
-                            setLoading(true);
-                            setError(null);
-                            
-                            try {
-                              const response = await fetch(`/api/telephony/refresh-number?firmId=${firm.id}`);
-
-                              const data = await response.json();
-                              
-                              if (!response.ok) {
-                                throw new Error(data.error || 'Failed to refresh number');
-                              }
-
-                              if (data.phoneNumber) {
-                                setSuccess(true);
-                                setTimeout(() => {
-                                  setSuccess(false);
-                                  onSave();
-                                }, 2000);
-                              } else {
-                                setError(data.note || 'Phone number not yet available via API. Check Vapi dashboard.');
-                                if (data.dashboardUrl) {
-                                  window.open(data.dashboardUrl, '_blank');
-                                }
-                              }
-                            } catch (err: any) {
-                              console.error('Error refreshing number:', err);
-                              setError(err.message || 'Failed to refresh number');
-                            } finally {
-                              setLoading(false);
-                            }
-                          }}
-                          disabled={loading}
-                          className="text-xs px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
-                        >
-                          Refresh Number
-                        </button>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Vapi assigns numbers asynchronously. Check <a href="https://dashboard.vapi.ai" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Vapi dashboard</a> to see the number.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Link Existing Phone Number */}
-                <div className="mt-4 p-3 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
-                  <p className="text-xs font-semibold mb-2" style={{ color: '#4A5D73' }}>
-                    Link Existing Vapi Phone Number
-                  </p>
-                  <p className="text-xs mb-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                    If you have a phone number already in Vapi (e.g., imported from Twilio), enter its ID to link it to this firm.
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      id="link_phone_number_id"
-                      placeholder="Enter Vapi phone number ID"
-                      className="flex-1 h-10 px-3 rounded-lg border text-sm"
-                      style={{
-                        borderColor: '#E5E7EB',
-                        backgroundColor: '#FFFFFF',
-                      }}
-                      onKeyDown={async (e) => {
-                        if (e.key === 'Enter' && !loading) {
-                          const phoneNumberId = (e.target as HTMLInputElement).value.trim();
-                          if (!phoneNumberId || !supabase || !firm) return;
-                          
-                          setLoading(true);
-                          setError(null);
-                          
-                          try {
-                            const response = await fetch('/api/vapi/link-number', {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                              },
-                              body: JSON.stringify({ 
-                                firmId: firm.id,
-                                phoneNumberId: phoneNumberId
-                              }),
-                            });
-
-                            const data = await response.json();
-                            
-                            if (!response.ok) {
-                              throw new Error(data.error || data.details || 'Failed to link number');
-                            }
-
-                            setSuccess(true);
-                            (e.target as HTMLInputElement).value = '';
-                            setTimeout(() => {
-                              setSuccess(false);
-                              onSave();
-                            }, 2000);
-                          } catch (err: any) {
-                            console.error('Error linking number:', err);
-                            setError(err.message || 'Failed to link number. Check browser console for details.');
-                          } finally {
-                            setLoading(false);
-                          }
-                        }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!supabase || !firm) return;
-                        
-                        const input = document.getElementById('link_phone_number_id') as HTMLInputElement;
-                        const phoneNumberId = input?.value.trim();
-                        
-                        if (!phoneNumberId) {
-                          setError('Please enter a phone number ID');
-                          return;
-                        }
-                        
-                        setLoading(true);
-                        setError(null);
-                        
-                        try {
-                          const response = await fetch('/api/vapi/link-number', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ 
-                              firmId: firm.id,
-                              phoneNumberId: phoneNumberId
-                            }),
-                          });
-
-                          const data = await response.json();
-                          
-                          if (!response.ok) {
-                            console.error('Link number error response:', data);
-                            
-                            // Handle array messages (Vapi validation errors)
-                            let errorMsg = 'Failed to link number';
-                            if (data.message && Array.isArray(data.message)) {
-                              errorMsg = data.message.join(', ');
-                            } else if (data.message && typeof data.message === 'string') {
-                              errorMsg = data.message;
-                            } else if (data.error) {
-                              errorMsg = data.error;
-                            } else if (data.details) {
-                              if (typeof data.details === 'object' && data.details.message) {
-                                errorMsg = Array.isArray(data.details.message) 
-                                  ? data.details.message.join(', ')
-                                  : data.details.message;
-                              } else {
-                                errorMsg = JSON.stringify(data.details);
-                              }
-                            }
-                            
-                            throw new Error(errorMsg);
-                          }
-
-                          setSuccess(true);
-                          input.value = '';
-                          setTimeout(() => {
-                            setSuccess(false);
-                            onSave();
-                          }, 2000);
-                        } catch (err: any) {
-                          console.error('Error linking number:', err);
-                          setError(err.message || 'Failed to link number. Check browser console for details.');
-                        } finally {
-                          setLoading(false);
-                        }
-                      }}
-                      disabled={loading}
-                      className="h-10 px-4 rounded-lg font-semibold text-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                      style={{
-                        backgroundColor: loading ? '#4A5D73' : '#0B1F3B',
-                        color: '#FFFFFF',
-                      }}
-                    >
-                      Link Number
-                    </button>
-                  </div>
-                  <p className="text-xs mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                    Find the phone number ID in the Vapi dashboard URL: <code className="bg-gray-200 px-1 rounded">/phone-numbers/[ID]</code>
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         </section>
 

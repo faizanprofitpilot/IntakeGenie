@@ -180,20 +180,56 @@ export async function POST(req: NextRequest) {
     const twilioPhoneNumber = purchasedNumber.phoneNumber; // E.164 format
     const twilioSid = purchasedNumber.sid;
 
-    // Step 3: Import Twilio number into Vapi
-    console.log('[Telephony Provision] Step 3: Importing Twilio number into Vapi...');
+    // Step 3: Create Vapi credential for Twilio (if needed) and import number
+    console.log('[Telephony Provision] Step 3: Creating Vapi credential and importing Twilio number...');
     let vapiPhoneNumberId: string;
+    let credentialId: string | null = null;
+    // Declare importPayload outside try block for error logging
+    let importPayload: any = null;
     
     try {
-      // According to Vapi docs, import Twilio number using provider: 'byo-phone-number'
-      // and provide the Twilio credentials and number
-      const importPayload = cleanVapiPayload({
-        provider: 'byo-phone-number',
-        number: twilioPhoneNumber,
-        twilioAccountSid: accountSid,
-        twilioAuthToken: authToken,
-        assistantId: assistantId, // Try to assign assistant immediately
-      });
+      // Step 3a: Create or get Twilio credential in Vapi
+      // Vapi requires credentials to be created separately before importing numbers
+      console.log('[Telephony Provision] Step 3a: Creating Twilio credential in Vapi...');
+      try {
+        const credentialPayload = cleanVapiPayload({
+          provider: 'twilio',
+          twilioAccountSid: accountSid,
+          twilioAuthToken: authToken,
+        });
+
+        console.log('[Telephony Provision] Creating credential with payload:', JSON.stringify(credentialPayload, null, 2));
+        const credentialResponse = await vapi.post('/credential', credentialPayload);
+        credentialId = credentialResponse.data.id;
+        console.log('[Telephony Provision] Credential created:', credentialId);
+      } catch (credError: any) {
+        // If credential already exists, try to find it
+        console.warn('[Telephony Provision] Credential creation failed, may already exist:', credError?.response?.data || credError?.message);
+        // Continue without credential ID - Vapi might accept direct credentials
+      }
+
+      // Step 3b: Import Twilio number into Vapi
+      // Try multiple formats based on Vapi API documentation
+      console.log('[Telephony Provision] Step 3b: Importing Twilio number into Vapi...');
+      
+      if (credentialId) {
+        // Use credential ID if we have it
+        importPayload = cleanVapiPayload({
+          provider: 'byo-phone-number',
+          number: twilioPhoneNumber,
+          credentialId: credentialId,
+          assistantId: assistantId,
+        });
+      } else {
+        // Try direct credentials (alternative format)
+        importPayload = cleanVapiPayload({
+          provider: 'byo-phone-number',
+          number: twilioPhoneNumber,
+          twilioAccountSid: accountSid,
+          twilioAuthToken: authToken,
+          assistantId: assistantId,
+        });
+      }
 
       console.log('[Telephony Provision] Vapi import payload:', JSON.stringify(importPayload, null, 2));
 
@@ -208,9 +244,15 @@ export async function POST(req: NextRequest) {
       console.log('[Telephony Provision] Vapi import response:', JSON.stringify(importResponse.data, null, 2));
     } catch (vapiError: any) {
       const errorDetails = vapiError?.response?.data || vapiError?.message;
-      console.error('[Telephony Provision] Vapi import error:', errorDetails);
-      console.error('[Telephony Provision] Vapi import error status:', vapiError?.response?.status);
+      const errorStatus = vapiError?.response?.status || 500;
+      
+      console.error('[Telephony Provision] ========== VAPI IMPORT ERROR ==========');
+      console.error('[Telephony Provision] Error status:', errorStatus);
+      console.error('[Telephony Provision] Error details:', JSON.stringify(errorDetails, null, 2));
       console.error('[Telephony Provision] Full error:', JSON.stringify(vapiError, null, 2));
+      if (importPayload) {
+        console.error('[Telephony Provision] Request payload:', JSON.stringify(importPayload, null, 2));
+      }
       
       // If import fails, we should clean up the Twilio number
       try {
@@ -220,10 +262,25 @@ export async function POST(req: NextRequest) {
         console.error('[Telephony Provision] Failed to cleanup Twilio number:', cleanupError);
       }
 
+      // Extract detailed error message
+      let errorMessage = 'Failed to import number into Vapi';
+      if (errorDetails) {
+        if (typeof errorDetails === 'string') {
+          errorMessage = errorDetails;
+        } else if (errorDetails.message) {
+          errorMessage = Array.isArray(errorDetails.message) 
+            ? errorDetails.message.join(', ')
+            : errorDetails.message;
+        } else if (errorDetails.error) {
+          errorMessage = errorDetails.error;
+        }
+      }
+
       return NextResponse.json({
         error: 'Failed to import number into Vapi',
+        message: errorMessage,
         details: errorDetails,
-        status: vapiError?.response?.status,
+        status: errorStatus,
       }, { status: 500 });
     }
 
