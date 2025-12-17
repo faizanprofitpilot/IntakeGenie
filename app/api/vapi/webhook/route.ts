@@ -4,8 +4,12 @@ import { upsertCall, finalizeCall } from '@/lib/intake/processor';
 import { vapi } from '@/lib/clients/vapi';
 
 // Ensure this route is public (no authentication required)
+// This route MUST be accessible without authentication for Vapi webhooks
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+
+// Explicitly mark as public route - no authentication required
+export const maxDuration = 60; // Allow up to 60 seconds for processing
 
 // Handle CORS preflight requests
 export async function OPTIONS() {
