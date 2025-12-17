@@ -52,20 +52,20 @@ export async function POST(request: NextRequest) {
     if (firmError || !firmData) {
       console.error('Firm lookup error:', firmError);
       // Fallback: try legacy env var approach for backward compatibility
-      if (process.env.FIRM_ID) {
+    if (process.env.FIRM_ID) {
         const { data: fallbackFirm, error: fallbackError } = await supabase
-          .from('firms')
-          .select('*')
-          .eq('id', process.env.FIRM_ID)
-          .single();
+        .from('firms')
+        .select('*')
+        .eq('id', process.env.FIRM_ID)
+        .single();
 
         if (fallbackError || !fallbackFirm) {
-          return generateTwiML(
+        return generateTwiML(
             '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Service configuration error. Please contact support.</Say><Hangup/></Response>'
-          );
-        }
+        );
+      }
         firm = fallbackFirm;
-      } else {
+    } else {
         return generateTwiML(
           '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Service configuration error. Please contact support.</Say><Hangup/></Response>'
         );

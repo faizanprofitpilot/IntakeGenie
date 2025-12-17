@@ -6,10 +6,15 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const method = request.method;
 
-  // Public routes - allow landing page, login, ALL Twilio webhook routes, and audio endpoints
+  // Public routes - allow landing page, login, ALL Twilio webhook routes, audio endpoints, and test endpoints
   // This check happens FIRST before any Supabase client creation to avoid 401 errors
   // CRITICAL: Return immediately for Twilio routes and audio endpoints to prevent any interference
-  if (pathname.startsWith('/api/twilio') || pathname.startsWith('/api/audio')) {
+  if (
+    pathname.startsWith('/api/twilio') || 
+    pathname.startsWith('/api/audio') ||
+    pathname.startsWith('/api/test-email') ||
+    pathname.startsWith('/api/test-intake-email')
+  ) {
     console.log(`[Middleware] Allowing public route: ${method} ${pathname}`);
     // Return immediately without any modifications to preserve the request
     return NextResponse.next();
