@@ -108,16 +108,14 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    // Provision phone number with assistant and webhook
+    // Step 1: Create phone number with provider
     let phoneResponse;
     try {
-      // Vapi API uses /phone-number (singular) endpoint
+      console.log('[Vapi Provision] Creating phone number with provider...');
       phoneResponse = await vapi.post('/phone-number', {
-        assistantId: assistantId,
-        server: {
-          url: webhookUrl,
-        },
+        provider: 'vapi', // Use Vapi's free phone number service
       });
+      console.log('[Vapi Provision] Phone number created:', phoneResponse.data);
     } catch (vapiError: any) {
       console.error('[Vapi Provision] Phone number creation error:', vapiError?.response?.data || vapiError?.message || vapiError);
       return NextResponse.json({ 
@@ -126,15 +124,37 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    const phoneNumber = phoneResponse.data.number || phoneResponse.data.phoneNumber;
-    if (!phoneNumber) {
-      console.error('[Vapi Provision] No phone number in response:', phoneResponse.data);
+    const phoneNumberId = phoneResponse.data.id;
+    if (!phoneNumberId) {
+      console.error('[Vapi Provision] No phone number ID in response:', phoneResponse.data);
       return NextResponse.json({ 
         error: 'Failed to provision number',
-        details: 'No phone number returned',
+        details: 'No phone number ID returned',
         response: phoneResponse.data
       }, { status: 500 });
     }
+
+    // Step 2: Update phone number to assign assistant and server URL
+    try {
+      console.log('[Vapi Provision] Updating phone number to assign assistant and server...');
+      const updateResponse = await vapi.patch(`/phone-number/${phoneNumberId}`, {
+        assistantId: assistantId,
+        server: {
+          url: webhookUrl,
+        },
+      });
+      console.log('[Vapi Provision] Phone number updated:', updateResponse.data);
+      
+      // Get the actual phone number from the updated response
+      phoneResponse.data = updateResponse.data; // Update with latest data
+    } catch (vapiError: any) {
+      console.error('[Vapi Provision] Phone number update error:', vapiError?.response?.data || vapiError?.message || vapiError);
+      // Continue anyway - phone number is created, just not configured
+      console.warn('[Vapi Provision] Phone number created but not fully configured');
+    }
+
+    // Get phone number from response (might be in number field or we use the ID)
+    const phoneNumber = phoneResponse.data.number || phoneResponse.data.phoneNumber || phoneNumberId;
 
     // Save number and assistant ID to firm record
     const { error: updateError } = await supabase
