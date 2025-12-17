@@ -150,15 +150,22 @@ export async function POST(req: NextRequest) {
       console.log('[Vapi Webhook] Processing conversation.updated event');
       console.log('[Vapi Webhook] Structured data:', JSON.stringify(structuredData, null, 2));
       try {
-        await upsertCall({
+        const result = await upsertCall({
           conversationId: conversation_id,
           firmId: firmId,
           intake: structuredData,
         });
-        console.log('[Vapi Webhook] Call upserted successfully');
+        if (result.success) {
+          console.log('[Vapi Webhook] Call upserted successfully');
+          console.log('[Vapi Webhook] Call ID:', result.callId);
+        } else {
+          console.error('[Vapi Webhook] Failed to upsert call:', result.error);
+          console.error('[Vapi Webhook] Error details:', JSON.stringify(result.error, null, 2));
+        }
       } catch (upsertError: any) {
-        console.error('[Vapi Webhook] Error upserting call:', upsertError);
+        console.error('[Vapi Webhook] Exception during upsert:', upsertError);
         console.error('[Vapi Webhook] Upsert error stack:', upsertError?.stack);
+        console.error('[Vapi Webhook] Upsert error details:', JSON.stringify(upsertError, null, 2));
       }
     }
 

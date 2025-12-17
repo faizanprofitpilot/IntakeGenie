@@ -14,7 +14,7 @@ export async function upsertCall({
   conversationId: string;
   firmId?: string;
   intake?: any;
-}) {
+}): Promise<{ success: boolean; callId?: string; error?: any }> {
   const supabase = createServiceClient();
 
   console.log('[Upsert Call] conversationId:', conversationId, 'firmId:', firmId);
@@ -77,14 +77,25 @@ export async function upsertCall({
     if (insertError) {
       console.error('[Upsert Call] Error creating call:', insertError);
       console.error('[Upsert Call] Insert error details:', JSON.stringify(insertError, null, 2));
+      console.error('[Upsert Call] Insert error code:', insertError.code);
+      console.error('[Upsert Call] Insert error message:', insertError.message);
+      return { success: false, error: insertError };
     } else {
-      console.log('[Upsert Call] Call created successfully:', newCall);
+      const callId = (newCall as any)?.id;
+      console.log('[Upsert Call] Call created successfully:', JSON.stringify(newCall, null, 2));
+      console.log('[Upsert Call] Call ID:', callId);
+      console.log('[Upsert Call] Firm ID:', firmId);
+      return { success: true, callId };
     }
   } else {
     console.warn('[Upsert Call] No firmId provided and no existing call found. Cannot create call record.');
     console.warn('[Upsert Call] Conversation ID:', conversationId);
     console.warn('[Upsert Call] This means the webhook could not find the firm. Check server logs for firm lookup errors.');
+    return { success: false, error: 'No firmId provided' };
   }
+  
+  // Update case
+  return { success: true };
 }
 
 /**
