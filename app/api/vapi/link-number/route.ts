@@ -125,10 +125,15 @@ export async function POST(req: NextRequest) {
       console.error('[Link Number] Full error:', JSON.stringify(errorDetails, null, 2));
       
       // Return more detailed error information
+      // Vapi often returns validation errors as arrays in the message field
+      const errorMessage = typeof errorDetails === 'object' && errorDetails?.message 
+        ? (Array.isArray(errorDetails.message) ? errorDetails.message.join(', ') : errorDetails.message)
+        : (typeof errorDetails === 'string' ? errorDetails : 'Unknown error');
+      
       return NextResponse.json({ 
         error: 'Failed to link phone number',
         details: errorDetails,
-        message: typeof errorDetails === 'object' && errorDetails?.message ? errorDetails.message : 'Unknown error',
+        message: errorMessage,
         statusCode: statusCode
       }, { status: 500 });
     }

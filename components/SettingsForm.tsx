@@ -648,9 +648,27 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                           const data = await response.json();
                           
                           if (!response.ok) {
-                            const errorMsg = data.error || data.details || data.message || 'Failed to link number';
                             console.error('Link number error response:', data);
-                            throw new Error(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+                            
+                            // Handle array messages (Vapi validation errors)
+                            let errorMsg = 'Failed to link number';
+                            if (data.message && Array.isArray(data.message)) {
+                              errorMsg = data.message.join(', ');
+                            } else if (data.message && typeof data.message === 'string') {
+                              errorMsg = data.message;
+                            } else if (data.error) {
+                              errorMsg = data.error;
+                            } else if (data.details) {
+                              if (typeof data.details === 'object' && data.details.message) {
+                                errorMsg = Array.isArray(data.details.message) 
+                                  ? data.details.message.join(', ')
+                                  : data.details.message;
+                              } else {
+                                errorMsg = JSON.stringify(data.details);
+                              }
+                            }
+                            
+                            throw new Error(errorMsg);
                           }
 
                           setSuccess(true);
