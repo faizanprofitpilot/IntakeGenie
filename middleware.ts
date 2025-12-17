@@ -12,9 +12,11 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith('/api/twilio') || 
     pathname.startsWith('/api/audio') ||
+    pathname.startsWith('/api/process-call') || // Allow process-call (called by Twilio and watchdog)
     pathname.startsWith('/api/test-email') ||
     pathname.startsWith('/api/test-intake-email') ||
-    pathname.startsWith('/api/test-voice-latency')
+    pathname.startsWith('/api/test-voice-latency') ||
+    pathname.startsWith('/api/test-transcription')
   ) {
     console.log(`[Middleware] Allowing public route: ${method} ${pathname}`);
     // Return immediately without any modifications to preserve the request

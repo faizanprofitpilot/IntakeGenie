@@ -13,7 +13,8 @@ interface CallTranscriptProps {
 export default function CallTranscript({ call }: CallTranscriptProps) {
   const router = useRouter();
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
-  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(true); // Default to open
+  const [transcriptOpen, setTranscriptOpen] = useState(false); // Default to closed
 
   const intake = (call.intake_json as IntakeData) || {};
   const summary = (call.summary_json as SummaryData) || null;
@@ -164,60 +165,7 @@ export default function CallTranscript({ call }: CallTranscriptProps) {
           </div>
         </div>
 
-        {/* Call Analytics (Expandable) */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
-          <button
-            onClick={() => setAnalyticsOpen(!analyticsOpen)}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-          >
-            <span className="font-semibold" style={{ color: '#0B1F3B' }}>Call Analytics</span>
-            {analyticsOpen ? <ChevronUp className="w-5 h-5" style={{ color: '#4A5D73' }} /> : <ChevronDown className="w-5 h-5" style={{ color: '#4A5D73' }} />}
-          </button>
-          {analyticsOpen && (
-            <div className="p-4 border-t border-gray-200">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#4A5D73' }}>
-                    Route Reason
-                  </div>
-                  <div className="capitalize" style={{ color: '#0B1F3B' }}>
-                    {call.route_reason?.replace('_', ' ')}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#4A5D73' }}>
-                    Status
-                  </div>
-                  <div style={{ color: '#0B1F3B' }}>
-                    {call.status}
-                  </div>
-                </div>
-                {intake.full_name && (
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#4A5D73' }}>
-                      Caller Name
-                    </div>
-                    <div style={{ color: '#0B1F3B' }}>
-                      {intake.full_name}
-                    </div>
-                  </div>
-                )}
-                {intake.callback_number && (
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#4A5D73' }}>
-                      Callback Number
-                    </div>
-                    <div style={{ color: '#0B1F3B' }}>
-                      {intake.callback_number}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Call Review (Expandable) */}
+        {/* Call Review (Expandable) - Default Open */}
         {summary && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
             <button
@@ -275,47 +223,109 @@ export default function CallTranscript({ call }: CallTranscriptProps) {
           </div>
         )}
 
-        {/* Full Transcript */}
-        <div className="bg-white rounded-xl shadow-sm p-6" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: '#0B1F3B' }}>
-            Full Transcript
-          </h2>
-          
-          {transcriptTurns.length > 0 ? (
-            <div className="space-y-4">
-              {transcriptTurns.map((turn, idx) => (
-                <div key={idx} className="flex items-start gap-3">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-semibold"
-                    style={{
-                      backgroundColor: turn.role === 'assistant' ? '#9333EA' : '#6B7280',
-                    }}
-                  >
-                    {turn.role === 'assistant' ? 'AI' : 'C'}
+        {/* Call Analytics (Expandable) - Below Call Review */}
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
+          <button
+            onClick={() => setAnalyticsOpen(!analyticsOpen)}
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <span className="font-semibold" style={{ color: '#0B1F3B' }}>Call Analytics</span>
+            {analyticsOpen ? <ChevronUp className="w-5 h-5" style={{ color: '#4A5D73' }} /> : <ChevronDown className="w-5 h-5" style={{ color: '#4A5D73' }} />}
+          </button>
+          {analyticsOpen && (
+            <div className="p-4 border-t border-gray-200">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#4A5D73' }}>
+                    Route Reason
                   </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-semibold mb-1" style={{ color: '#4A5D73' }}>
-                      {turn.role === 'assistant' ? 'AI Receptionist' : 'Caller'}
-                    </div>
-                    <div className="text-sm leading-relaxed" style={{ color: '#0B1F3B' }}>
-                      {turn.content}
-                    </div>
+                  <div className="capitalize" style={{ color: '#0B1F3B' }}>
+                    {call.route_reason?.replace('_', ' ')}
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : call.transcript_text ? (
-            <div className="rounded-xl p-4" style={{ backgroundColor: '#F5F7FA' }}>
-              <pre className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: '#0B1F3B' }}>
-                {call.transcript_text}
-              </pre>
-            </div>
-          ) : (
-            <div className="text-sm text-center py-8" style={{ color: '#4A5D73', opacity: 0.8 }}>
-              No transcript available
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#4A5D73' }}>
+                    Status
+                  </div>
+                  <div style={{ color: '#0B1F3B' }}>
+                    {call.status}
+                  </div>
+                </div>
+                {intake.full_name && (
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#4A5D73' }}>
+                      Caller Name
+                    </div>
+                    <div style={{ color: '#0B1F3B' }}>
+                      {intake.full_name}
+                    </div>
+                  </div>
+                )}
+                {intake.callback_number && (
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#4A5D73' }}>
+                      Callback Number
+                    </div>
+                    <div style={{ color: '#0B1F3B' }}>
+                      {intake.callback_number}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
+
+        {/* Full Transcript (Collapsible, Default Closed) */}
+        {(call.transcript_text || transcriptTurns.length > 0) && (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' }}>
+            <button
+              onClick={() => setTranscriptOpen(!transcriptOpen)}
+              className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <span className="font-semibold" style={{ color: '#0B1F3B' }}>Full Transcript</span>
+              {transcriptOpen ? <ChevronUp className="w-5 h-5" style={{ color: '#4A5D73' }} /> : <ChevronDown className="w-5 h-5" style={{ color: '#4A5D73' }} />}
+            </button>
+            {transcriptOpen && (
+              <div className="p-6 border-t border-gray-200">
+                {transcriptTurns.length > 0 ? (
+                  <div className="space-y-4">
+                    {transcriptTurns.map((turn, idx) => (
+                      <div key={idx} className="flex items-start gap-3">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-semibold"
+                          style={{
+                            backgroundColor: turn.role === 'assistant' ? '#9333EA' : '#6B7280',
+                          }}
+                        >
+                          {turn.role === 'assistant' ? 'AI' : 'C'}
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-xs font-semibold mb-1" style={{ color: '#4A5D73' }}>
+                            {turn.role === 'assistant' ? 'AI Receptionist' : 'Caller'}
+                          </div>
+                          <div className="text-sm leading-relaxed" style={{ color: '#0B1F3B' }}>
+                            {turn.content}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : call.transcript_text ? (
+                  <div className="rounded-xl p-4" style={{ backgroundColor: '#F5F7FA' }}>
+                    <pre className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: '#0B1F3B' }}>
+                      {call.transcript_text}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="text-sm text-center py-8" style={{ color: '#4A5D73', opacity: 0.8 }}>
+                    No transcript available
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
