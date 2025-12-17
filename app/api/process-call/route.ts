@@ -115,21 +115,50 @@ export async function POST(request: NextRequest) {
     console.log(`[Process Call] Starting processing for call ${callSid}, current status: ${call.status}, has recording: ${!!recordingUrl}, has transcript: ${!!transcript}`);
 
     // If no recording URL, try to fetch from Twilio
+    // Twilio recordings may not be immediately available after call ends, so retry with delay
     if (!recordingUrl) {
-      try {
-        console.log(`[Process Call] Fetching recordings for call ${callSid}...`);
-        const recordings = await twilioClient.recordings.list({
-          callSid: callSid,
-          limit: 1,
-        });
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      if (!accountSid) {
+        console.error('[Process Call] TWILIO_ACCOUNT_SID not configured');
+      } else {
+        // Retry up to 3 times with increasing delays (Twilio recordings may take time to process)
+        let recordings: any[] = [];
+        const maxRetries = 3;
+        const delays = [2000, 5000, 10000]; // 2s, 5s, 10s
+        
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            console.log(`[Process Call] Fetching recordings for call ${callSid} (attempt ${attempt + 1}/${maxRetries})...`);
+            
+            // Use the account-specific recordings API
+            recordings = await twilioClient.api.v2010.accounts(accountSid).recordings.list({
+              callSid: callSid,
+              limit: 1,
+            });
 
-        console.log(`[Process Call] Found ${recordings.length} recording(s) for call ${callSid}`);
+            console.log(`[Process Call] Found ${recordings.length} recording(s) for call ${callSid}`);
+
+            if (recordings.length > 0) {
+              break; // Found recording, exit retry loop
+            }
+            
+            // If no recording found and not last attempt, wait before retrying
+            if (attempt < maxRetries - 1) {
+              console.log(`[Process Call] No recording found yet, waiting ${delays[attempt]}ms before retry...`);
+              await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+            }
+          } catch (error) {
+            console.error(`[Process Call] Error fetching recording (attempt ${attempt + 1}):`, error);
+            if (attempt < maxRetries - 1) {
+              await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+            }
+          }
+        }
 
         if (recordings.length > 0) {
           // Twilio recording URI format: /Accounts/{AccountSid}/Recordings/{RecordingSid}.json
           // Audio file format: /Accounts/{AccountSid}/Recordings/{RecordingSid}.mp3
           const recordingSid = recordings[0].sid;
-          const accountSid = process.env.TWILIO_ACCOUNT_SID;
           recordingUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Recordings/${recordingSid}.mp3`;
           
           console.log(`[Process Call] Recording URL: ${recordingUrl}`);
@@ -141,10 +170,15 @@ export async function POST(request: NextRequest) {
             // @ts-ignore - Supabase type inference issue
             .eq('id', call.id);
         } else {
-          console.warn(`[Process Call] No recordings found for call ${callSid} - call may not have been recorded. Will proceed without transcript.`);
+          console.warn(`[Process Call] No recordings found for call ${callSid} after ${maxRetries} attempts - call may not have been recorded. Will proceed without transcript.`);
+          // Update status to summarizing since we're skipping transcription
+          await supabase
+            .from('calls')
+            // @ts-ignore - Supabase type inference issue
+            .update({ status: 'summarizing' })
+            // @ts-ignore - Supabase type inference issue
+            .eq('id', call.id);
         }
-      } catch (error) {
-        console.error('[Process Call] Error fetching recording from Twilio:', error);
       }
     }
 

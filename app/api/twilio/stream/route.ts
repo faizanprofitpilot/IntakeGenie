@@ -71,7 +71,16 @@ async function startCallRecording(callSid: string) {
     // Start recording on the call - records the entire call
     // Using create() with empty params to start basic recording
     // The recording will be available after the call ends and can be fetched via process-call
-    const recording = await twilioClient.calls(callSid).recordings.create({});
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    if (!accountSid) {
+      throw new Error('TWILIO_ACCOUNT_SID not configured');
+    }
+    
+    // Use the account-specific recordings API
+    const recording = await twilioClient.api.v2010.accounts(accountSid).calls(callSid).recordings.create({
+      recordingStatusCallback: `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio/recording-status`,
+      recordingStatusCallbackMethod: 'POST',
+    });
     console.log(`[Stream] Started recording for call ${callSid}, recording SID: ${recording.sid}`);
   } catch (error) {
     console.error(`[Stream] Error starting recording for call ${callSid}:`, error);

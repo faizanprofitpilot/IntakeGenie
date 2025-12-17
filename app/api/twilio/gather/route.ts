@@ -226,6 +226,16 @@ export async function POST(request: NextRequest) {
 
     const response = new twiml.VoiceResponse();
 
+    // Play a short typing/thinking sound to indicate processing
+    // This gives user feedback that the system is working during latency
+    const typingAppUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
+    if (typingAppUrl && userUtterance && state.history.length > 1) {
+      // Only play typing sound if user actually said something (not initial greeting)
+      const typingSoundUrl = `${typingAppUrl}/api/audio/typing`;
+      response.play(typingSoundUrl);
+      console.log('[Gather] Playing typing sound to indicate processing...');
+    }
+
     // Use the audio URL - it should be cached by now or will be soon
     try {
       const { playUrl, fallbackText } = await getTTSAudioUrl(responseText, callSid, turnNumber);

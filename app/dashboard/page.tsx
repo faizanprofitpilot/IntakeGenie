@@ -50,7 +50,7 @@ export default async function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 py-8 rounded-xl" style={{ backgroundColor: '#F5F7FA', minHeight: 'calc(100vh - 4rem)' }}>
           <div className="mb-8">
             <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ color: '#0B1F3B' }}>
-              Dashboard
+                  Dashboard
             </h1>
             <p className="text-sm" style={{ color: '#4A5D73' }}>
               Overview of your firm's call activity and settings
@@ -89,8 +89,8 @@ export default async function DashboardPage() {
                   }}
                 >
                   <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#4A5D73' }}>
-                    Total Calls
-                  </div>
+                            Total Calls
+                      </div>
                   <div className="text-3xl font-bold" style={{ color: '#0B1F3B' }}>
                     {callsCount || 0}
                   </div>
@@ -103,7 +103,7 @@ export default async function DashboardPage() {
                 >
                   <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#4A5D73' }}>
                     Firm Name
-                  </div>
+                      </div>
                   <div className="text-2xl font-bold" style={{ color: '#0B1F3B' }}>
                     {firm.firm_name}
                   </div>
@@ -117,11 +117,11 @@ export default async function DashboardPage() {
                   <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#4A5D73' }}>
                     Routing Mode
                   </div>
-                  <div className="text-2xl font-bold capitalize" style={{ color: '#0B1F3B' }}>
-                    {firm.mode.replace('_', ' ')}
-                  </div>
-                </div>
-              </div>
+                        <div className="text-2xl font-bold capitalize" style={{ color: '#0B1F3B' }}>
+                          {firm.mode.replace('_', ' ')}
+                        </div>
+                      </div>
+                      </div>
 
               {/* IntakeGenie Number Card */}
               {firm.twilio_number && (
@@ -135,7 +135,7 @@ export default async function DashboardPage() {
                     <h2 className="text-lg font-semibold mb-1" style={{ color: '#4A5D73' }}>
                       Your IntakeGenie Number
                     </h2>
-                  </div>
+                    </div>
                   <div className="text-2xl font-bold" style={{ color: '#0B1F3B' }}>
                     {firm.twilio_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')}
                   </div>
@@ -156,43 +156,43 @@ export default async function DashboardPage() {
                   <p className="text-sm" style={{ color: '#4A5D73', opacity: 0.7 }}>
                     Current configuration for your firm
                   </p>
-                </div>
+              </div>
                 <div className="grid gap-6 md:grid-cols-2 border-b border-gray-200 pb-6 mb-6">
-                  <div>
+                    <div>
                     <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A5D73' }}>
                       Forward To Number
                     </div>
                     <div className="text-sm" style={{ color: '#0B1F3B' }}>{firm.forward_to_number}</div>
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                     <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A5D73' }}>
                       Notification Emails
                     </div>
                     <div className="text-sm" style={{ color: '#0B1F3B' }}>{firm.notify_emails?.join(', ') || 'None'}</div>
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                     <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A5D73' }}>
                       Timezone
                     </div>
                     <div className="text-sm" style={{ color: '#0B1F3B' }}>{firm.timezone}</div>
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                     <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A5D73' }}>
                       Business Hours
                     </div>
                     <div className="text-sm" style={{ color: '#0B1F3B' }}>{firm.open_time} - {firm.close_time}</div>
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                     <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A5D73' }}>
                       Open Days
                     </div>
                     <div className="text-sm" style={{ color: '#0B1F3B' }}>
-                      {firm.open_days
-                        .map((d: number) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d])
-                        .join(', ')}
+                        {firm.open_days
+                          .map((d: number) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d])
+                          .join(', ')}
                     </div>
-                  </div>
-                  <div>
+                    </div>
+                    <div>
                     <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A5D73' }}>
                       Failover Ring Duration
                     </div>
@@ -233,61 +233,61 @@ export default async function DashboardPage() {
                       <thead>
                         <tr className="border-b border-gray-200">
                           <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: '#4A5D73' }}>
-                            Caller
-                          </th>
+                              Caller
+                            </th>
                           <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: '#4A5D73' }}>
-                            Date
-                          </th>
+                              Date
+                            </th>
                           <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: '#4A5D73' }}>
-                            Status
-                          </th>
+                              Status
+                            </th>
                           <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: '#4A5D73' }}>
-                            Urgency
-                          </th>
-                        </tr>
-                      </thead>
+                              Urgency
+                            </th>
+                          </tr>
+                        </thead>
                       <tbody>
-                        {recentCalls.map((call) => {
-                          const intake = call.intake_json as any;
+                          {recentCalls.map((call) => {
+                            const intake = call.intake_json as any;
                           const callerName = intake?.full_name || call.from_number || 'Unknown';
-                          return (
+                            return (
                             <tr key={call.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4 text-sm" style={{ color: '#0B1F3B' }}>{callerName}</td>
                               <td className="px-6 py-4 text-sm" style={{ color: '#4A5D73', opacity: 0.8 }}>
-                                {new Date(call.started_at).toLocaleString()}
-                              </td>
+                                  {new Date(call.started_at).toLocaleString()}
+                                </td>
                               <td className="px-6 py-4">
-                                <span
+                                  <span
                                   className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                                    call.status === 'emailed'
+                                      call.status === 'emailed'
                                       ? 'bg-green-50 text-green-700 border border-green-200'
-                                      : call.status === 'error'
+                                        : call.status === 'error'
                                         ? 'bg-red-50 text-red-700 border border-red-200'
                                         : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                                  }`}
-                                >
-                                  {call.status}
-                                </span>
-                              </td>
+                                    }`}
+                                  >
+                                    {call.status}
+                                  </span>
+                                </td>
                               <td className="px-6 py-4">
-                                <span
+                                  <span
                                   className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                                    call.urgency === 'high'
+                                      call.urgency === 'high'
                                       ? 'bg-red-50 text-red-700 border border-red-200'
-                                      : call.urgency === 'emergency_redirected'
+                                        : call.urgency === 'emergency_redirected'
                                         ? 'bg-orange-50 text-orange-700 border border-orange-200'
                                         : 'bg-gray-50 text-gray-700 border border-gray-200'
-                                  }`}
-                                >
-                                  {call.urgency}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                                    }`}
+                                  >
+                                    {call.urgency}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   <div className="p-6 border-t border-gray-200">
                     <Button 
                       asChild 
@@ -297,7 +297,7 @@ export default async function DashboardPage() {
                         borderColor: '#E5E7EB',
                         color: '#0B1F3B',
                       }}
-                    >
+                      >
                       <Link href="/calls">View All Calls</Link>
                     </Button>
                   </div>
@@ -306,7 +306,7 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
-      </div>
+    </div>
     </PlatformLayout>
   );
 }
