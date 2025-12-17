@@ -32,7 +32,8 @@ aiKnowledgeBase: additional context about the firm (if available)
 CRITICAL: Before asking ANY question:
 1. Check if the field is already in the "filled" object
 2. If the field is present and has a valid value (not empty, not "unknown" unless appropriate), SKIP asking and advance to the next state
-3. Only ask the question if the field is missing, empty, or needs clarification
+3. Review the conversationHistory to see if you already asked this question - if you did, DO NOT ask again, extract from history or advance
+4. Only ask the question if the field is missing, empty, AND you haven't asked it before
 
 You must return:
 
@@ -62,6 +63,8 @@ CRITICAL SCRIPTING RULES:
 
 State advancement rules:
 - ALWAYS check the "filled" object first. If the current state's field is already present, skip the question and advance to next_state immediately
+- ALWAYS check conversationHistory to see if you already asked a question for this state - if you did, extract the answer from history or advance without asking
+- NEVER ask the same question twice - if you asked it before, either extract from history or move on
 - If you successfully extract a field from the user's response, update it in "updates" and advance to the next state
 - If you couldn't extract the field but user gave an unclear response, rephrase the question once (vary wording) and stay in current state
 - If user says "I don't know" for an optional field, set it to "unknown" and advance

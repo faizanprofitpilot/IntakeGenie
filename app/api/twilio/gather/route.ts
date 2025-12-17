@@ -3,6 +3,7 @@ import { generateTwiML, normalizeAppUrl, getTTSAudioUrl } from '@/lib/clients/tw
 import { createServiceClient } from '@/lib/clients/supabase';
 import { processAgentTurn } from '@/lib/clients/openai';
 import { ConversationState, IntakeData } from '@/types';
+import { STATE_DESCRIPTIONS } from '@/lib/agent/prompts';
 import { twiml } from 'twilio';
 
 // Ensure this route is public (no authentication required)
@@ -159,6 +160,35 @@ export async function POST(request: NextRequest) {
       console.log(`[Gather] Skipped ${skippedStates.length} state(s): ${skippedStates.join(' -> ')} -> ${currentState}`);
     }
 
+    // Additional safeguard: Check conversation history to prevent asking same question twice
+    // Map of state to question keywords to detect if we already asked
+    const stateQuestionKeywords: Record<string, string[]> = {
+      'CONTACT_NAME': ['name', 'what\'s your name', 'your name', 'full name'],
+      'CONTACT_PHONE': ['phone', 'number', 'call you back', 'callback', 'best number'],
+      'CONTACT_EMAIL': ['email', 'email address'],
+      'REASON': ['what happened', 'calling about', 'reason', 'briefly tell me'],
+      'INCIDENT_TIME': ['when', 'time', 'date', 'occurred', 'when did this happen'],
+      'INCIDENT_LOCATION': ['where', 'location', 'occur', 'where did this occur'],
+      'INJURY': ['injured', 'injury', 'hurt', 'were you injured'],
+      'TREATMENT': ['medical treatment', 'treatment', 'medical', 'received medical'],
+      'INSURANCE': ['insurance', 'insurance involved'],
+      'URGENCY': ['urgent', 'urgency', 'time-sensitive'],
+    };
+
+    // Check if we already asked a question for this state in history
+    const currentStateKeywords = stateQuestionKeywords[currentState] || [];
+    const alreadyAsked = currentStateKeywords.some(keyword => {
+      return state.history.some(msg => 
+        msg.role === 'assistant' && 
+        msg.content.toLowerCase().includes(keyword.toLowerCase())
+      );
+    });
+
+    // If we already asked and field is still not filled, try to extract from current utterance or skip
+    if (alreadyAsked && stateFieldMap[currentState] && !state.filled[stateFieldMap[currentState]]) {
+      console.log(`[Gather] Warning: Already asked question for state ${currentState} but field not extracted. Will attempt extraction from current response.`);
+    }
+
     // Call OpenAI to get next response
     const agentResponse = await processAgentTurn(
       {
@@ -173,6 +203,35 @@ export async function POST(request: NextRequest) {
     );
 
     console.log(`[Gather] Agent response: state=${agentResponse.next_state}, updates=${JSON.stringify(Object.keys(agentResponse.updates))}, done=${agentResponse.done}`);
+
+    // Post-processing check: Prevent asking the same question if we already asked it
+    if (agentResponse.next_state === state.state && stateFieldMap[state.state]) {
+      const field = stateFieldMap[state.state];
+      const questionKeywords = stateQuestionKeywords[state.state] || [];
+      const wasAsked = questionKeywords.some(keyword => {
+        return state.history.some(msg => 
+          msg.role === 'assistant' && 
+          msg.content.toLowerCase().includes(keyword.toLowerCase())
+        );
+      });
+      
+      // If we already asked this question and still no field value, force advance
+      if (wasAsked && !state.filled[field] && !agentResponse.updates[field] && nextStateMap[state.state]) {
+        console.log(`[Gather] Preventing duplicate question for ${state.state} - already asked, forcing state advance`);
+        // Force advance to next state
+        agentResponse.next_state = nextStateMap[state.state] as ConversationState;
+        // Set field to unknown if we can't extract it (use type assertion for dynamic field)
+        if (!agentResponse.updates[field]) {
+          (agentResponse.updates as any)[field] = 'unknown';
+        }
+        // Update response text to acknowledge and move on - get next state's question
+        const nextStateDesc = STATE_DESCRIPTIONS[agentResponse.next_state] || '';
+        const nextQuestion = nextStateDesc.includes('EXACT script:') 
+          ? nextStateDesc.split('EXACT script:')[1]?.split('"')[1] || ''
+          : nextStateDesc.split('.')[0]?.trim() || '';
+        agentResponse.assistant_say = nextQuestion || 'Thanks. Let me continue.';
+      }
+    }
 
     // Override closing script with exact required text
     let responseText = agentResponse.assistant_say;
