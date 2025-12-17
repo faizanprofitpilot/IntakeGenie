@@ -29,15 +29,31 @@ export async function POST(req: NextRequest) {
       structuredData,
       phoneNumber,
       metadata,
+      phoneNumberId,
     } = body;
 
-    console.log('[Vapi Webhook] Event:', event, 'Conversation ID:', conversation_id);
+    console.log('[Vapi Webhook] Event:', event, 'Conversation ID:', conversation_id, 'Phone Number:', phoneNumber);
+
+    // Look up firm by phone number if not provided in metadata
+    let firmId = metadata?.firmId;
+    if (!firmId && phoneNumber) {
+      const supabase = createServiceClient();
+      const { data: firmData } = await supabase
+        .from('firms')
+        .select('id')
+        .eq('vapi_phone_number', phoneNumber)
+        .single();
+      
+      if (firmData) {
+        firmId = firmData.id;
+      }
+    }
 
     if (event === 'conversation.updated') {
       // Update call with latest intake data
       await upsertCall({
         conversationId: conversation_id,
-        firmId: metadata?.firmId,
+        firmId: firmId,
         intake: structuredData,
       });
     }
@@ -48,7 +64,7 @@ export async function POST(req: NextRequest) {
         conversationId: conversation_id,
         transcript,
         phoneNumber,
-        firmId: metadata?.firmId,
+        firmId: firmId,
       });
     }
 

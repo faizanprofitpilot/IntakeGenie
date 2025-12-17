@@ -167,8 +167,26 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
         const newFirm = newFirmData as any;
         firmId = newFirm.id;
 
-        // Vapi phone number will be provisioned separately via the provision-number endpoint
-        // No automatic provisioning on firm creation
+        // Automatically provision Vapi phone number for new firm
+        try {
+          const provisionResponse = await fetch('/api/vapi/provision-number', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ firmId }),
+          });
+
+          if (!provisionResponse.ok) {
+            const errorData = await provisionResponse.json();
+            console.error('Error provisioning Vapi number:', errorData);
+            // Don't throw - allow firm creation to succeed even if number provision fails
+            // User can retry later via the provision button if needed
+          }
+        } catch (provisionError) {
+          console.error('Error calling provision-number API:', provisionError);
+          // Don't throw - allow firm creation to succeed
+        }
       }
 
       setSuccess(true);

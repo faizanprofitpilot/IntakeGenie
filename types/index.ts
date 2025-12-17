@@ -24,6 +24,7 @@ export interface Firm {
   failover_ring_seconds: number;
   twilio_number: string | null; // Deprecated - kept for migration
   vapi_phone_number: string | null; // Vapi phone number
+  vapi_assistant_id: string | null; // Vapi assistant ID
   ai_greeting_custom: string | null;
   ai_tone: AITone;
   ai_knowledge_base: string | null;
