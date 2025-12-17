@@ -475,9 +475,62 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                   Each firm is assigned a dedicated AI intake number automatically. Calls to this number are handled by IntakeGenie.
                 </p>
                 {(firm.vapi_phone_number || firm.twilio_number) && (
-                  <p className="mt-2 text-sm font-medium" style={{ color: '#0B1F3B' }}>
-                    Current number: {firm.vapi_phone_number || firm.twilio_number}
-                  </p>
+                  <div className="mt-2">
+                    <p className="text-sm font-medium" style={{ color: '#0B1F3B' }}>
+                      Current number: {firm.vapi_phone_number || firm.twilio_number}
+                    </p>
+                    {firm.vapi_phone_number && firm.vapi_phone_number.includes('ID:') && (
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!supabase || !firm) return;
+                            
+                            setLoading(true);
+                            setError(null);
+                            
+                            try {
+                              const response = await fetch('/api/vapi/refresh-phone-number', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ firmId: firm.id }),
+                              });
+
+                              const data = await response.json();
+                              
+                              if (!response.ok) {
+                                throw new Error(data.error || 'Failed to refresh number');
+                              }
+
+                              if (data.phoneNumber) {
+                                setSuccess(true);
+                                setTimeout(() => {
+                                  setSuccess(false);
+                                  onSave();
+                                }, 2000);
+                              } else {
+                                setError('Phone number not yet assigned. Check Vapi dashboard.');
+                              }
+                            } catch (err: any) {
+                              console.error('Error refreshing number:', err);
+                              setError(err.message || 'Failed to refresh number');
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                          disabled={loading}
+                          className="text-xs px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+                        >
+                          Refresh Number
+                        </button>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Phone number is being assigned. Click to refresh.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
