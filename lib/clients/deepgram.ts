@@ -10,7 +10,14 @@ export const deepgram = createClient(apiKey);
 
 export async function transcribeRecording(recordingUrl: string): Promise<string> {
   try {
+    console.log('[Deepgram] Starting transcription for URL:', recordingUrl);
+    
     // Deepgram batch transcription
+    // For Twilio recordings, we need to use the actual MP3 URL
+    // Deepgram can handle URLs, but Twilio URLs require authentication
+    // We'll need to either download the file first or use Deepgram's URL transcription
+    // Since Twilio URLs are public (with auth token in some cases), let's try direct URL first
+    
     const { result, error } = await deepgram.listen.prerecorded.transcribeUrl(
       { url: recordingUrl } as any,
       {
@@ -22,6 +29,7 @@ export async function transcribeRecording(recordingUrl: string): Promise<string>
     );
 
     if (error) {
+      console.error('[Deepgram] Transcription error response:', error);
       throw error;
     }
 
@@ -31,9 +39,20 @@ export async function transcribeRecording(recordingUrl: string): Promise<string>
       result?.results?.channels?.[0]?.alternatives?.[0]?.transcript ||
       '';
 
+    if (!transcript) {
+      console.warn('[Deepgram] Transcription completed but transcript is empty');
+      throw new Error('Transcription returned empty result');
+    }
+
+    console.log('[Deepgram] Transcription successful, length:', transcript.length);
     return transcript;
   } catch (error) {
-    console.error('Deepgram transcription error:', error);
+    console.error('[Deepgram] Transcription error:', error);
+    
+    // Provide more context in error message
+    if (error instanceof Error) {
+      throw new Error(`Deepgram transcription failed: ${error.message}`);
+    }
     throw error;
   }
 }

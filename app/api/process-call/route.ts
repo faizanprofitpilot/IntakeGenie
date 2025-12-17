@@ -103,29 +103,44 @@ export async function POST(request: NextRequest) {
     // If no recording URL, try to fetch from Twilio
     if (!recordingUrl) {
       try {
+        console.log(`[Process Call] Fetching recordings for call ${callSid}...`);
         const recordings = await twilioClient.recordings.list({
           callSid: callSid,
           limit: 1,
         });
 
+        console.log(`[Process Call] Found ${recordings.length} recording(s) for call ${callSid}`);
+        
         if (recordings.length > 0) {
-          recordingUrl = recordings[0].uri.replace('.json', '.mp3');
+          // Twilio recording URI format: /Accounts/{AccountSid}/Recordings/{RecordingSid}.json
+          // Audio file format: /Accounts/{AccountSid}/Recordings/{RecordingSid}.mp3
+          const recordingSid = recordings[0].sid;
+          const accountSid = process.env.TWILIO_ACCOUNT_SID;
+          recordingUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Recordings/${recordingSid}.mp3`;
+          
+          console.log(`[Process Call] Recording URL: ${recordingUrl}`);
+          
           await supabase
             .from('calls')
             // @ts-ignore - Supabase type inference issue
             .update({ recording_url: recordingUrl })
             // @ts-ignore - Supabase type inference issue
             .eq('id', call.id);
+        } else {
+          console.log(`[Process Call] No recordings found for call ${callSid} - may need to wait for Twilio to process`);
         }
       } catch (error) {
-        console.error('Error fetching recording from Twilio:', error);
+        console.error('[Process Call] Error fetching recording from Twilio:', error);
       }
     }
 
     // Transcribe if we have a recording and no transcript
     if (recordingUrl && !transcript) {
       try {
+        console.log(`[Process Call] Starting transcription for call ${callSid} with URL: ${recordingUrl}`);
         transcript = await transcribeRecording(recordingUrl);
+        console.log(`[Process Call] Transcription successful for call ${callSid}, length: ${transcript.length}`);
+        
         await supabase
           .from('calls')
           // @ts-ignore - Supabase type inference issue
@@ -133,21 +148,28 @@ export async function POST(request: NextRequest) {
           // @ts-ignore - Supabase type inference issue
           .eq('id', call.id);
       } catch (error) {
-        console.error('Transcription error:', error);
+        console.error('[Process Call] Transcription error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[Process Call] Error details:', errorMessage);
+        
         await supabase
           .from('calls')
           // @ts-ignore - Supabase type inference issue
           .update({
             status: 'error',
-            error_message: `Transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            error_message: `Transcription failed: ${errorMessage}`,
           })
           // @ts-ignore - Supabase type inference issue
           .eq('id', call.id);
-        return new Response('Transcription failed', { status: 500 });
+        
+        // Don't return early - continue with summary using intake data only
+        transcript = null;
       }
     } else if (!recordingUrl && !transcript) {
       // If no recording and no transcript, skip to summary with what we have
       console.log('[Process Call] No recording available, proceeding with intake data only');
+    } else if (!transcript && recordingUrl) {
+      console.log('[Process Call] Recording URL exists but transcript is missing - transcription may have failed previously');
     }
 
     // Generate summary (even if no transcript, use intake data)

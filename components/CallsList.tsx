@@ -281,21 +281,36 @@ export default function CallsList({ calls, searchParams }: CallsListProps) {
                           onClick={async (e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            if (confirm('Are you sure you want to delete this call?')) {
+                            if (confirm('Are you sure you want to delete this call? This action cannot be undone.')) {
                               try {
                                 const response = await fetch(`/api/calls/${call.id}`, {
                                   method: 'DELETE',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
                                 });
-                                if (response.ok) {
-                                  router.refresh();
+                                
+                                let data;
+                                try {
+                                  data = await response.json();
+                                } catch (jsonError) {
+                                  const text = await response.text();
+                                  console.error('Failed to parse response:', text);
+                                  alert(`Failed to delete call: Server returned invalid response`);
+                                  return;
+                                }
+                                
+                                if (response.ok && data.success) {
+                                  // Force a hard refresh of the page to ensure the call is removed
+                                  window.location.reload();
                                 } else {
-                                  const errorText = await response.text();
-                                  console.error('Delete failed:', errorText);
-                                  alert('Failed to delete call');
+                                  const errorMessage = data.error || 'Failed to delete call';
+                                  console.error('Delete failed:', errorMessage, 'Response:', response.status);
+                                  alert(`Failed to delete call: ${errorMessage}`);
                                 }
                               } catch (error) {
                                 console.error('Error deleting call:', error);
-                                alert('Failed to delete call');
+                                alert('Failed to delete call. Please check the console for details.');
                               }
                             }
                           }}
