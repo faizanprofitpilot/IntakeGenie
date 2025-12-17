@@ -58,14 +58,21 @@ export async function processAgentTurn(
   // Adjust tone instructions based on setting
   const toneInstructions = getToneInstructions(context.aiTone || 'professional');
 
+  // Combine all system content into ONE message (more efficient)
+  const systemContent = `${SYSTEM_PROMPT}
+
+${DEVELOPER_INSTRUCTIONS}
+
+${toneInstructions}
+
+Current state: ${context.state}
+State description: ${STATE_DESCRIPTIONS[context.state] || ''}
+Fields collected so far: ${JSON.stringify(context.filled)}${firmContext}`;
+
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: SYSTEM_PROMPT + '\n\n' + DEVELOPER_INSTRUCTIONS + toneInstructions + firmContext,
-    },
-    {
-      role: 'system',
-      content: `Current state: ${context.state}\nState description: ${STATE_DESCRIPTIONS[context.state] || ''}\nFields collected so far: ${JSON.stringify(context.filled)}${firmContext}`,
+      content: systemContent,
     },
     ...context.conversationHistory.map((msg) => ({
       role: msg.role,
@@ -81,7 +88,8 @@ export async function processAgentTurn(
     model: 'gpt-4o-mini',
     messages,
     response_format: { type: 'json_object' },
-    temperature: 0.7,
+    temperature: 0.5, // Lower temperature for faster, more focused responses
+    max_tokens: 300, // Limit response length for faster generation
   });
 
   const content = response.choices[0]?.message?.content;
