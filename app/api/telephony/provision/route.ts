@@ -179,8 +179,23 @@ export async function POST(req: NextRequest) {
       }, { status: 500 });
     }
 
-    const twilioPhoneNumber = purchasedNumber.phoneNumber; // E.164 format
+    let twilioPhoneNumber = purchasedNumber.phoneNumber; // Should already be E.164 format from Twilio
     const twilioSid = purchasedNumber.sid;
+
+    // Ensure phone number is in E.164 format (starts with +)
+    if (!twilioPhoneNumber.startsWith('+')) {
+      // If Twilio didn't return E.164 format, add +1 for US numbers
+      twilioPhoneNumber = `+1${twilioPhoneNumber.replace(/\D/g, '')}`;
+      console.log('[Telephony Provision] Converted phone number to E.164:', twilioPhoneNumber);
+    }
+
+    // Validate E.164 format (starts with +, followed by country code and number)
+    if (!/^\+[1-9]\d{1,14}$/.test(twilioPhoneNumber)) {
+      return NextResponse.json({
+        error: 'Invalid phone number format',
+        message: `Phone number must be in E.164 format (e.g., +15551234567). Got: ${twilioPhoneNumber}`,
+      }, { status: 500 });
+    }
 
     // Step 3: Import Twilio number into Vapi
     // According to Vapi Postman docs: https://www.postman.com/vapiai/public-workspace/request/l2eelnz/import-twilio-number
@@ -193,9 +208,11 @@ export async function POST(req: NextRequest) {
     
     try {
       // Build import payload according to Vapi API spec
-      // The import endpoint expects: number (E.164), twilioAccountSid, twilioAuthToken
+      // The import endpoint expects: twilioPhoneNumber (E.164), twilioAccountSid, twilioAuthToken
+      // Note: Field name is twilioPhoneNumber, NOT "number"
+      // Twilio phone numbers are already in E.164 format (e.g., +15551234567)
       importPayload = cleanVapiPayload({
-        number: twilioPhoneNumber, // E.164 format (e.g., +15551234567)
+        twilioPhoneNumber: twilioPhoneNumber, // E.164 format (e.g., +15551234567)
         twilioAccountSid: accountSid,
         twilioAuthToken: authToken,
       });
