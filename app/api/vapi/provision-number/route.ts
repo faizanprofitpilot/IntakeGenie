@@ -36,6 +36,15 @@ export async function POST(req: NextRequest) {
 
     const firm = firmData as any;
 
+    // Check if phone number already exists - don't provision again
+    if (firm.vapi_phone_number) {
+      return NextResponse.json({ 
+        phoneNumber: firm.vapi_phone_number,
+        assistantId: firm.vapi_assistant_id,
+        message: 'Phone number already provisioned'
+      });
+    }
+
     // Get app URL for webhook
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
     if (!appUrl) {

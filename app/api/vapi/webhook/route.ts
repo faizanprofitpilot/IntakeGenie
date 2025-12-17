@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
         .eq('vapi_phone_number', phoneNumber)
         .single();
       
-      if (firmData) {
-        firmId = firmData.id;
+      if (firmData && (firmData as any).id) {
+        firmId = (firmData as any).id;
       }
     }
 

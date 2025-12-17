@@ -141,8 +141,7 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
       let firmId: string;
 
       if (firm) {
-        // Update existing firm - NEVER purchase a number on updates
-        // Number is only allocated on the very first "Save Settings" click when creating a firm
+        // Update existing firm
         firmId = firm.id;
         const { error: updateError } = await supabase
           .from('firms')
@@ -152,9 +151,30 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
           .eq('id', firm.id);
 
         if (updateError) throw updateError;
-        // Explicitly skip number purchase for updates - number already exists or was never allocated
+        
+        // Only provision number if firm doesn't have one yet
+        if (!firm.vapi_phone_number) {
+          try {
+            const provisionResponse = await fetch('/api/vapi/provision-number', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ firmId }),
+            });
+
+            if (!provisionResponse.ok) {
+              const errorData = await provisionResponse.json();
+              console.error('Error provisioning Vapi number:', errorData);
+              // Don't throw - allow settings update to succeed
+            }
+          } catch (provisionError) {
+            console.error('Error calling provision-number API:', provisionError);
+            // Don't throw - allow settings update to succeed
+          }
+        }
       } else {
-        // Create new firm - this is the ONLY time we purchase a number (first save)
+        // Create new firm
         // @ts-ignore - Supabase type inference issue
         const { data: newFirmData, error: insertError } = await supabase.from('firms').insert({
           ...firmData,
@@ -168,6 +188,7 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
         firmId = newFirm.id;
 
         // Automatically provision Vapi phone number for new firm
+        // The API endpoint will check and skip if number already exists
         try {
           const provisionResponse = await fetch('/api/vapi/provision-number', {
             method: 'POST',
