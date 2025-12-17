@@ -49,8 +49,8 @@ async function sendBasicFallbackEmail(
     </html>
   `;
 
-  // Use environment variable for from address, fallback to Resend default
-  const fromAddress = process.env.RESEND_FROM_ADDRESS || 'IntakeGenie <onboarding@resend.dev>';
+  // Use Resend's default from address
+  const fromAddress = 'IntakeGenie <onboarding@resend.dev>';
 
   console.log('[Process Call] Sending fallback email:', {
     to,
@@ -100,12 +100,12 @@ export async function POST(request: NextRequest) {
 
     // Only update to transcribing if not already in that state (avoid race conditions)
     if (call.status !== 'transcribing' && call.status !== 'summarizing' && call.status !== 'emailed') {
-      await supabase
-        .from('calls')
-        // @ts-ignore - Supabase type inference issue
-        .update({ status: 'transcribing' })
-        // @ts-ignore - Supabase type inference issue
-        .eq('id', call.id);
+    await supabase
+      .from('calls')
+      // @ts-ignore - Supabase type inference issue
+      .update({ status: 'transcribing' })
+      // @ts-ignore - Supabase type inference issue
+      .eq('id', call.id);
     }
 
     let transcript = call.transcript_text;
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
         });
 
         console.log(`[Process Call] Found ${recordings.length} recording(s) for call ${callSid}`);
-        
+
         if (recordings.length > 0) {
           // Twilio recording URI format: /Accounts/{AccountSid}/Recordings/{RecordingSid}.json
           // Audio file format: /Accounts/{AccountSid}/Recordings/{RecordingSid}.mp3
@@ -217,12 +217,12 @@ export async function POST(request: NextRequest) {
         urgency_level: (call.urgency as UrgencyLevel) || 'normal',
         follow_up_recommendation: 'Standard follow-up recommended - summary generation had issues',
       };
-      await supabase
-        .from('calls')
-        // @ts-ignore - Supabase type inference issue
+        await supabase
+          .from('calls')
+          // @ts-ignore - Supabase type inference issue
         .update({ summary_json: summary as any, status: 'summarizing' })
-        // @ts-ignore - Supabase type inference issue
-        .eq('id', call.id);
+          // @ts-ignore - Supabase type inference issue
+          .eq('id', call.id);
     }
 
     // Send email - ALWAYS send, even if summarization failed
@@ -269,11 +269,11 @@ export async function POST(request: NextRequest) {
             .update({
               status: 'error',
               error_message: `Email failed after retries and fallback: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            })
-            // @ts-ignore - Supabase type inference issue
-            .eq('id', call.id);
-          return new Response('Email failed', { status: 500 });
-        }
+          })
+          // @ts-ignore - Supabase type inference issue
+          .eq('id', call.id);
+        return new Response('Email failed', { status: 500 });
+      }
       }
     } else {
       // No email addresses configured - still mark as emailed

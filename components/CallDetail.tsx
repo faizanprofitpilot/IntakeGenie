@@ -185,76 +185,76 @@ export default function CallDetail({ call }: CallDetailProps) {
                 Summary
               </h4>
               <ul className="list-disc list-inside space-y-2 text-sm" style={{ color: '#0B1F3B' }}>
-                {summary.summary_bullets.map((bullet, idx) => (
-                  <li key={idx}>{bullet}</li>
-                ))}
-              </ul>
-            </div>
+              {summary.summary_bullets.map((bullet, idx) => (
+                <li key={idx}>{bullet}</li>
+              ))}
+            </ul>
+          </div>
 
-            {Object.keys(summary.key_facts).length > 0 && (
+          {Object.keys(summary.key_facts).length > 0 && (
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#4A5D73' }}>
                   Key Facts
                 </h4>
                 <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2 text-sm">
-                  {summary.key_facts.incident_date && (
-                    <>
+                {summary.key_facts.incident_date && (
+                  <>
                       <dt className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#4A5D73' }}>
                         Incident Date:
                       </dt>
-                      <dd style={{ color: '#0B1F3B' }}>{summary.key_facts.incident_date}</dd>
-                    </>
-                  )}
-                  {summary.key_facts.location && (
-                    <>
+                    <dd style={{ color: '#0B1F3B' }}>{summary.key_facts.incident_date}</dd>
+                  </>
+                )}
+                {summary.key_facts.location && (
+                  <>
                       <dt className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#4A5D73' }}>
                         Location:
                       </dt>
-                      <dd style={{ color: '#0B1F3B' }}>{summary.key_facts.location}</dd>
-                    </>
-                  )}
-                  {summary.key_facts.injuries && (
-                    <>
+                    <dd style={{ color: '#0B1F3B' }}>{summary.key_facts.location}</dd>
+                  </>
+                )}
+                {summary.key_facts.injuries && (
+                  <>
                       <dt className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#4A5D73' }}>
                         Injuries:
                       </dt>
-                      <dd style={{ color: '#0B1F3B' }}>{summary.key_facts.injuries}</dd>
-                    </>
-                  )}
-                  {summary.key_facts.treatment && (
-                    <>
+                    <dd style={{ color: '#0B1F3B' }}>{summary.key_facts.injuries}</dd>
+                  </>
+                )}
+                {summary.key_facts.treatment && (
+                  <>
                       <dt className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#4A5D73' }}>
                         Treatment:
                       </dt>
-                      <dd style={{ color: '#0B1F3B' }}>{summary.key_facts.treatment}</dd>
-                    </>
-                  )}
-                  {summary.key_facts.insurance && (
-                    <>
+                    <dd style={{ color: '#0B1F3B' }}>{summary.key_facts.treatment}</dd>
+                  </>
+                )}
+                {summary.key_facts.insurance && (
+                  <>
                       <dt className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#4A5D73' }}>
                         Insurance:
                       </dt>
-                      <dd style={{ color: '#0B1F3B' }}>{summary.key_facts.insurance}</dd>
-                    </>
-                  )}
-                </dl>
-              </div>
-            )}
+                    <dd style={{ color: '#0B1F3B' }}>{summary.key_facts.insurance}</dd>
+                  </>
+                )}
+              </dl>
+            </div>
+          )}
 
-            {summary.action_items.length > 0 && (
+          {summary.action_items.length > 0 && (
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#4A5D73' }}>
                   Action Items
                 </h4>
                 <ul className="list-disc list-inside space-y-2 text-sm" style={{ color: '#0B1F3B' }}>
-                  {summary.action_items.map((item, idx) => (
-                    <li key={idx}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+                {summary.action_items.map((item, idx) => (
+                  <li key={idx}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-            <div>
+          <div>
               <h4 className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#4A5D73' }}>
                 Follow-up Recommendation
               </h4>
@@ -303,13 +303,13 @@ export default function CallDetail({ call }: CallDetailProps) {
             className="h-12 px-6 rounded-lg font-semibold cursor-pointer"
             style={{ backgroundColor: '#0B1F3B', color: '#FFFFFF' }}
           >
-            <a
-              href={call.recording_url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Listen to Recording
-            </a>
+          <a
+            href={call.recording_url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Listen to Recording
+          </a>
           </Button>
         </div>
       )}

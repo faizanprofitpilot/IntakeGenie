@@ -139,7 +139,7 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
       };
 
       let firmId: string;
-      
+
       if (firm) {
         // Update existing firm - NEVER purchase a number on updates
         // Number is only allocated on the very first "Save Settings" click when creating a firm
@@ -247,18 +247,18 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
           </div>
 
           <div className="space-y-5">
-            <div>
+      <div>
               <label 
                 htmlFor="firm_name" 
                 className="block text-xs font-semibold uppercase tracking-wide mb-2"
                 style={{ color: '#4A5D73' }}
               >
-                Firm Name
-              </label>
-              <input
-                type="text"
-                id="firm_name"
-                required
+          Firm Name
+        </label>
+        <input
+          type="text"
+          id="firm_name"
+          required
                 className="w-full h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
                 style={{
                   borderColor: '#E5E7EB',
@@ -273,24 +273,24 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                   e.currentTarget.style.borderColor = '#E5E7EB';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
-                value={formData.firm_name}
-                onChange={(e) => setFormData({ ...formData, firm_name: e.target.value })}
-              />
-            </div>
+          value={formData.firm_name}
+          onChange={(e) => setFormData({ ...formData, firm_name: e.target.value })}
+        />
+      </div>
 
-            <div>
+      <div>
               <label 
                 htmlFor="forward_to_number" 
                 className="block text-xs font-semibold uppercase tracking-wide mb-2"
                 style={{ color: '#4A5D73' }}
               >
                 Forward To Number
-              </label>
-              <input
-                type="tel"
-                id="forward_to_number"
-                required
-                pattern="^\+[1-9]\d{1,14}$"
+        </label>
+        <input
+          type="tel"
+          id="forward_to_number"
+          required
+          pattern="^\+[1-9]\d{1,14}$"
                 placeholder="+15551234567"
                 className="w-full h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
                 style={{
@@ -306,26 +306,26 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                   e.currentTarget.style.borderColor = '#E5E7EB';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
-                value={formData.forward_to_number}
-                onChange={(e) => setFormData({ ...formData, forward_to_number: e.target.value })}
-              />
+          value={formData.forward_to_number}
+          onChange={(e) => setFormData({ ...formData, forward_to_number: e.target.value })}
+        />
               <p className="mt-1.5 text-xs" style={{ color: '#4A5D73', opacity: 0.7 }}>
                 E.164 format required (e.g., +15551234567)
               </p>
-            </div>
+      </div>
 
-            <div>
+      <div>
               <label 
                 htmlFor="notify_emails" 
                 className="block text-xs font-semibold uppercase tracking-wide mb-2"
                 style={{ color: '#4A5D73' }}
               >
                 Notification Emails
-              </label>
-              <input
-                type="text"
-                id="notify_emails"
-                required
+        </label>
+        <input
+          type="text"
+          id="notify_emails"
+          required
                 placeholder="email1@example.com, email2@example.com"
                 className="w-full h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
                 style={{
@@ -341,24 +341,24 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                   e.currentTarget.style.borderColor = '#E5E7EB';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
-                value={formData.notify_emails}
-                onChange={(e) => setFormData({ ...formData, notify_emails: e.target.value })}
-              />
+          value={formData.notify_emails}
+          onChange={(e) => setFormData({ ...formData, notify_emails: e.target.value })}
+        />
               <p className="mt-1.5 text-xs" style={{ color: '#4A5D73', opacity: 0.7 }}>
                 Comma-separated list of email addresses
               </p>
-            </div>
+      </div>
 
-            <div>
+      <div>
               <label 
                 htmlFor="timezone" 
                 className="block text-xs font-semibold uppercase tracking-wide mb-2"
                 style={{ color: '#4A5D73' }}
               >
-                Timezone
-              </label>
-              <select
-                id="timezone"
+          Timezone
+        </label>
+        <select
+          id="timezone"
                 className="w-full h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
                 style={{
                   borderColor: '#E5E7EB',
@@ -373,29 +373,29 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                   e.currentTarget.style.borderColor = '#E5E7EB';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
-                value={formData.timezone}
-                onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-              >
-                {TIMEZONES.map((tz) => (
+          value={formData.timezone}
+          onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+        >
+          {TIMEZONES.map((tz) => (
                   <option key={tz.value} value={tz.value}>
                     {tz.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            </option>
+          ))}
+        </select>
+      </div>
 
             {/* Manual Twilio Number Input (for testing) */}
             {firm && (
-              <div>
+      <div>
                 <label 
                   htmlFor="manual_twilio_number" 
                   className="block text-xs font-semibold uppercase tracking-wide mb-2"
                   style={{ color: '#4A5D73' }}
                 >
                   IntakeGenie Number (Manual Entry for Testing)
-                </label>
+          </label>
                 <div className="flex gap-2">
-                  <input
+            <input
                     type="tel"
                     id="manual_twilio_number"
                     pattern="^\+[1-9]\d{1,14}$"
@@ -520,9 +520,9 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                   }}
                 >
                   <div className="flex items-start">
-                    <input
-                      type="radio"
-                      name="mode"
+            <input
+              type="radio"
+              name="mode"
                       value={mode.value}
                       checked={formData.mode === mode.value}
                       onChange={() => setFormData({ ...formData, mode: mode.value })}
@@ -537,10 +537,10 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                         {mode.description}
                       </div>
                     </div>
-                  </div>
-                </div>
-              </label>
-            ))}
+        </div>
+      </div>
+            </label>
+          ))}
           </div>
         </section>
 
@@ -591,22 +591,22 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                     </button>
                   );
                 })}
-              </div>
-            </div>
+        </div>
+      </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
                 <label 
                   htmlFor="open_time" 
                   className="block text-xs font-semibold uppercase tracking-wide mb-2"
                   style={{ color: '#4A5D73' }}
                 >
-                  Open Time
-                </label>
-                <input
-                  type="time"
-                  id="open_time"
-                  required
+            Open Time
+          </label>
+          <input
+            type="time"
+            id="open_time"
+            required
                   className="w-full h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
                   style={{
                     borderColor: '#E5E7EB',
@@ -621,22 +621,22 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                     e.currentTarget.style.borderColor = '#E5E7EB';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
-                  value={formData.open_time}
-                  onChange={(e) => setFormData({ ...formData, open_time: e.target.value })}
-                />
-              </div>
-              <div>
+            value={formData.open_time}
+            onChange={(e) => setFormData({ ...formData, open_time: e.target.value })}
+          />
+        </div>
+        <div>
                 <label 
                   htmlFor="close_time" 
                   className="block text-xs font-semibold uppercase tracking-wide mb-2"
                   style={{ color: '#4A5D73' }}
                 >
-                  Close Time
-                </label>
-                <input
-                  type="time"
-                  id="close_time"
-                  required
+            Close Time
+          </label>
+          <input
+            type="time"
+            id="close_time"
+            required
                   className="w-full h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
                   style={{
                     borderColor: '#E5E7EB',
@@ -651,10 +651,10 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                     e.currentTarget.style.borderColor = '#E5E7EB';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
-                  value={formData.close_time}
-                  onChange={(e) => setFormData({ ...formData, close_time: e.target.value })}
-                />
-              </div>
+            value={formData.close_time}
+            onChange={(e) => setFormData({ ...formData, close_time: e.target.value })}
+          />
+        </div>
             </div>
           </div>
         </section>
@@ -668,22 +668,22 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
             <p className="text-sm" style={{ color: '#4A5D73', opacity: 0.7 }}>
               Configure how long to ring before routing to AI agent
             </p>
-          </div>
+      </div>
 
-          <div>
+      <div>
             <label 
               htmlFor="failover_ring_seconds" 
               className="block text-xs font-semibold uppercase tracking-wide mb-2"
               style={{ color: '#4A5D73' }}
             >
               Failover Ring Duration
-            </label>
-            <input
-              type="number"
-              id="failover_ring_seconds"
-              required
-              min="5"
-              max="60"
+        </label>
+        <input
+          type="number"
+          id="failover_ring_seconds"
+          required
+          min="5"
+          max="60"
               className="w-full h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
               style={{
                 borderColor: '#E5E7EB',
@@ -698,22 +698,22 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                 e.currentTarget.style.borderColor = '#E5E7EB';
                 e.currentTarget.style.boxShadow = 'none';
               }}
-              value={formData.failover_ring_seconds}
-              onChange={(e) =>
-                setFormData({ ...formData, failover_ring_seconds: parseInt(e.target.value) })
-              }
-            />
+          value={formData.failover_ring_seconds}
+          onChange={(e) =>
+            setFormData({ ...formData, failover_ring_seconds: parseInt(e.target.value) })
+          }
+        />
             <p className="mt-1.5 text-xs" style={{ color: '#4A5D73', opacity: 0.7 }}>
               Number of seconds to ring before routing to AI agent (5-60 seconds)
             </p>
-          </div>
+      </div>
         </section>
 
         {/* Save Button */}
         <div className="pt-6 border-t border-gray-200 sticky bottom-0 bg-white -mx-6 -mb-6 px-6 pb-6 rounded-b-lg">
-          <button
-            type="submit"
-            disabled={loading}
+        <button
+          type="submit"
+          disabled={loading}
             className="w-full h-12 rounded-lg font-semibold text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               backgroundColor: loading ? '#4A5D73' : '#0B1F3B',
@@ -729,11 +729,11 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                 e.currentTarget.style.backgroundColor = '#0B1F3B';
               }
             }}
-          >
-            {loading ? 'Saving...' : 'Save Settings'}
-          </button>
-        </div>
-      </form>
+        >
+          {loading ? 'Saving...' : 'Save Settings'}
+        </button>
+      </div>
+    </form>
     </div>
   );
 }

@@ -37,23 +37,23 @@ export default async function SettingsPage() {
         <div className="w-full max-w-[900px] px-4 py-8 rounded-xl" style={{ backgroundColor: '#F5F7FA', minHeight: 'calc(100vh - 4rem)' }}>
           <div className="mb-8">
             <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ color: '#0B1F3B' }}>
-              Settings
+                  Settings
             </h1>
             <p className="text-sm" style={{ color: '#4A5D73' }}>
               Manage your firm configuration and preferences
             </p>
-          </div>
+              </div>
 
           <div 
             className="bg-white rounded-xl shadow-sm p-6 md:p-8"
             style={{
               boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-            }}
-          >
+                }}
+              >
             <SettingsForm firm={firm} onSave={refreshData} />
           </div>
         </div>
-      </div>
+        </div>
     </PlatformLayout>
   );
 }

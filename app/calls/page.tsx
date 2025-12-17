@@ -13,52 +13,52 @@ export default async function CallsPage({
 }) {
   try {
     const supabase = await createServerClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-    if (!session) {
-      redirect('/login');
-    }
+  if (!session) {
+    redirect('/login');
+  }
 
-    // Get user's firm
+  // Get user's firm
     const { data: firmData, error: firmError } = await supabase
-      .from('firms')
-      .select('id')
-      .eq('owner_user_id', session.user.id)
-      .limit(1)
-      .single();
+    .from('firms')
+    .select('id')
+    .eq('owner_user_id', session.user.id)
+    .limit(1)
+    .single();
 
     if (firmError || !firmData) {
-      redirect('/settings');
-    }
+    redirect('/settings');
+  }
 
-    const firm = firmData as any;
+  const firm = firmData as any;
 
-    // Build query
-    let query = supabase
-      .from('calls')
-      .select('*')
-      .eq('firm_id', firm.id)
-      .order('started_at', { ascending: false });
+  // Build query
+  let query = supabase
+    .from('calls')
+    .select('*')
+    .eq('firm_id', firm.id)
+    .order('started_at', { ascending: false });
 
-    // Apply filters
-    if (searchParams.status) {
-      query = query.eq('status', searchParams.status);
-    }
-    if (searchParams.urgency) {
-      query = query.eq('urgency', searchParams.urgency);
-    }
+  // Apply filters
+  if (searchParams.status) {
+    query = query.eq('status', searchParams.status);
+  }
+  if (searchParams.urgency) {
+    query = query.eq('urgency', searchParams.urgency);
+  }
 
-    const { data: calls, error } = await query;
+  const { data: calls, error } = await query;
 
-    if (error) {
-      console.error('Error fetching calls:', error);
-    }
+  if (error) {
+    console.error('Error fetching calls:', error);
+  }
 
     const callsList = calls || [];
 
-    return (
+  return (
       <PlatformLayout>
         <div className="w-full px-4 py-4">
           <div className="max-w-7xl mx-auto px-4 py-8 rounded-xl" style={{ backgroundColor: '#F5F7FA', minHeight: 'calc(100vh - 4rem)' }}>
@@ -74,8 +74,8 @@ export default async function CallsPage({
               className="bg-white rounded-xl shadow-sm overflow-hidden"
               style={{
                 boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-              }}
-            >
+                }}
+              >
               <CallsList calls={callsList} searchParams={searchParams} />
             </div>
           </div>
@@ -110,6 +110,6 @@ export default async function CallsPage({
           </div>
         </div>
       </PlatformLayout>
-    );
-  }
+  );
+}
 }

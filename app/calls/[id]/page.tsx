@@ -46,7 +46,7 @@ export default async function CallDetailPage({ params }: { params: Promise<{ id:
         <div className="max-w-7xl mx-auto px-4 py-8 rounded-xl" style={{ backgroundColor: '#F5F7FA', minHeight: 'calc(100vh - 4rem)' }}>
           <CallTranscript call={call as any} />
         </div>
-      </div>
+          </div>
     </PlatformLayout>
   );
 }

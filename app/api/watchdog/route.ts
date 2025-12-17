@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
           if (notifyEmails.length > 0) {
             // Send basic fallback email
             const { resend } = await import('@/lib/clients/resend');
-            const fromAddress = process.env.RESEND_FROM_ADDRESS || 'IntakeGenie <onboarding@resend.dev>';
+            const fromAddress = 'IntakeGenie <onboarding@resend.dev>';
             
             console.log('[Watchdog] Sending fallback email for stuck call:', {
               to: notifyEmails,

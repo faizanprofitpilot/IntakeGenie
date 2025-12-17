@@ -104,8 +104,8 @@ export async function sendIntakeEmail(
   const maxRetries = 3;
   let lastError: any = null;
 
-  // Use environment variable for from address, fallback to default
-  const fromAddress = process.env.RESEND_FROM_ADDRESS || 'IntakeGenie <onboarding@resend.dev>';
+  // Use Resend's default from address (works out of the box)
+  const fromAddress = 'IntakeGenie <onboarding@resend.dev>';
 
   console.log('[Resend] Attempting to send intake email:', {
     to,
@@ -118,17 +118,17 @@ export async function sendIntakeEmail(
     try {
       console.log(`[Resend] Email attempt ${attempt}/${maxRetries}...`);
       
-      const { data, error } = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
         from: fromAddress,
-        to,
-        subject,
-        html,
-      });
+      to,
+      subject,
+      html,
+    });
 
-      if (error) {
+    if (error) {
         console.error(`[Resend] Resend API returned error on attempt ${attempt}:`, error);
-        throw error;
-      }
+      throw error;
+    }
 
       console.log('[Resend] Email sent successfully:', {
         id: data?.id,
@@ -136,8 +136,8 @@ export async function sendIntakeEmail(
         subject,
       });
 
-      return data;
-    } catch (error) {
+    return data;
+  } catch (error) {
       lastError = error;
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[Resend] Email attempt ${attempt}/${maxRetries} failed:`, {
@@ -151,7 +151,7 @@ export async function sendIntakeEmail(
         const delay = Math.pow(2, attempt - 1) * 1000;
         console.log(`[Resend] Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
-      }
+  }
     }
   }
 

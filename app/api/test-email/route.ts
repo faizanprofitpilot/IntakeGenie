@@ -35,9 +35,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Try to send a test email
+    // Try to send a test email using Resend's default from address
+    const fromAddress = 'IntakeGenie <onboarding@resend.dev>';
+    
     const { data, error } = await resend.emails.send({
-      from: 'IntakeGenie <noreply@intakegenie.com>',
+      from: fromAddress,
       to: [to],
       subject: 'IntakeGenie Test Email',
       html: `
@@ -53,7 +55,7 @@ export async function GET(request: NextRequest) {
         { 
           error: 'Failed to send email',
           details: error,
-          hint: 'Check that the domain "intakegenie.com" is verified in your Resend account, or update the "from" address to a verified domain'
+          hint: 'Check that RESEND_API_KEY is correctly configured and valid'
         },
         { status: 500 }
       );
