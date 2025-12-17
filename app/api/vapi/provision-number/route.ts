@@ -135,20 +135,33 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2: Update phone number to assign assistant and server URL
+    // Note: Only update assistantId and server - do NOT include phone number field
     let updateResponse;
     try {
       console.log('[Vapi Provision] Updating phone number to assign assistant and server...');
-      updateResponse = await vapi.patch(`/phone-number/${phoneNumberId}`, {
+      const updatePayload: any = {
         assistantId: assistantId,
-        server: {
+      };
+      
+      // Only include server if webhookUrl is provided
+      if (webhookUrl) {
+        updatePayload.server = {
           url: webhookUrl,
-        },
-      });
+        };
+      }
+      
+      updateResponse = await vapi.patch(`/phone-number/${phoneNumberId}`, updatePayload);
       console.log('[Vapi Provision] Phone number updated:', updateResponse.data);
     } catch (vapiError: any) {
-      console.error('[Vapi Provision] Phone number update error:', vapiError?.response?.data || vapiError?.message || vapiError);
-      // Continue anyway - phone number is created, just not configured
-      console.warn('[Vapi Provision] Phone number created but not fully configured');
+      const errorDetails = vapiError?.response?.data || vapiError?.message || vapiError;
+      console.error('[Vapi Provision] Phone number update error:', errorDetails);
+      console.error('[Vapi Provision] Full error response:', JSON.stringify(errorDetails, null, 2));
+      
+      // If the error is about phone number format, it might be a Vapi API issue
+      // Continue anyway - phone number is created, assistant can be assigned later
+      if (errorDetails?.message?.includes('phone number')) {
+        console.warn('[Vapi Provision] Phone number format error - this may be a Vapi API issue. Phone number created but not fully configured.');
+      }
     }
 
     // Step 3: Fetch the phone number details to get the actual number
