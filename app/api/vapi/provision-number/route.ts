@@ -164,27 +164,16 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
       
-      // Step 2: Try to assign assistant via PATCH after a delay
-      // For free Vapi numbers, the number may not be ready immediately
-      // This is optional - if it fails, user can configure via dashboard
-      console.log('[Vapi Provision] Attempting to assign assistant to phone number...');
-      try {
-        // Wait longer for free numbers to be processed
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-        
-        // Try to assign assistant - this may fail if number isn't ready yet
-        await vapi.patch(`/phone-number/${phoneNumberId}`, { 
-          assistantId: assistantId 
-        });
-        console.log('[Vapi Provision] Phone number successfully linked with assistant');
-      } catch (updateError: any) {
-        const errorDetails = updateError?.response?.data || updateError?.message;
-        console.warn('[Vapi Provision] Could not assign assistant immediately (this is normal for free numbers):', errorDetails);
-        console.warn('[Vapi Provision] Phone number ID:', phoneNumberId);
-        console.warn('[Vapi Provision] Assistant ID:', assistantId);
-        console.warn('[Vapi Provision] The assistant will be automatically assigned when the number is ready, or you can configure it via the Vapi dashboard');
-        // Continue - this is expected for free numbers that aren't ready yet
-      }
+      // Step 2: For free Vapi numbers, skip PATCH assignment
+      // Free numbers are assigned asynchronously and may not have a valid number field yet
+      // PATCHing before the number is ready causes validation errors
+      // The assistant can be configured via Vapi dashboard once the number is assigned
+      console.log('[Vapi Provision] Phone number created successfully');
+      console.log('[Vapi Provision] Phone number ID:', phoneNumberId);
+      console.log('[Vapi Provision] Assistant ID:', assistantId);
+      console.log('[Vapi Provision] Note: For free Vapi numbers, the assistant must be configured via the Vapi dashboard once the number is assigned');
+      console.log('[Vapi Provision] Dashboard: https://dashboard.vapi.ai/phone-numbers');
+      // Skip PATCH - it will fail for free numbers that aren't ready yet
     } catch (vapiError: any) {
       const errorDetails = vapiError?.response?.data || vapiError?.message || vapiError;
       const errorStatus = vapiError?.response?.status || 500;
