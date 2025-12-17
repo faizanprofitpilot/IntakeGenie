@@ -558,6 +558,126 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                     )}
                   </div>
                 )}
+                {/* Link Existing Phone Number */}
+                <div className="mt-4 p-3 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
+                  <p className="text-xs font-semibold mb-2" style={{ color: '#4A5D73' }}>
+                    Link Existing Vapi Phone Number
+                  </p>
+                  <p className="text-xs mb-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
+                    If you have a phone number already in Vapi (e.g., imported from Twilio), enter its ID to link it to this firm.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      id="link_phone_number_id"
+                      placeholder="Enter Vapi phone number ID"
+                      className="flex-1 h-10 px-3 rounded-lg border text-sm"
+                      style={{
+                        borderColor: '#E5E7EB',
+                        backgroundColor: '#FFFFFF',
+                      }}
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter' && !loading) {
+                          const phoneNumberId = (e.target as HTMLInputElement).value.trim();
+                          if (!phoneNumberId || !supabase || !firm) return;
+                          
+                          setLoading(true);
+                          setError(null);
+                          
+                          try {
+                            const response = await fetch('/api/vapi/link-number', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({ 
+                                firmId: firm.id,
+                                phoneNumberId: phoneNumberId
+                              }),
+                            });
+
+                            const data = await response.json();
+                            
+                            if (!response.ok) {
+                              throw new Error(data.error || data.details || 'Failed to link number');
+                            }
+
+                            setSuccess(true);
+                            (e.target as HTMLInputElement).value = '';
+                            setTimeout(() => {
+                              setSuccess(false);
+                              onSave();
+                            }, 2000);
+                          } catch (err: any) {
+                            console.error('Error linking number:', err);
+                            setError(err.message || 'Failed to link number. Check browser console for details.');
+                          } finally {
+                            setLoading(false);
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!supabase || !firm) return;
+                        
+                        const input = document.getElementById('link_phone_number_id') as HTMLInputElement;
+                        const phoneNumberId = input?.value.trim();
+                        
+                        if (!phoneNumberId) {
+                          setError('Please enter a phone number ID');
+                          return;
+                        }
+                        
+                        setLoading(true);
+                        setError(null);
+                        
+                        try {
+                          const response = await fetch('/api/vapi/link-number', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ 
+                              firmId: firm.id,
+                              phoneNumberId: phoneNumberId
+                            }),
+                          });
+
+                          const data = await response.json();
+                          
+                          if (!response.ok) {
+                            throw new Error(data.error || data.details || 'Failed to link number');
+                          }
+
+                          setSuccess(true);
+                          input.value = '';
+                          setTimeout(() => {
+                            setSuccess(false);
+                            onSave();
+                          }, 2000);
+                        } catch (err: any) {
+                          console.error('Error linking number:', err);
+                          setError(err.message || 'Failed to link number. Check browser console for details.');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading}
+                      className="h-10 px-4 rounded-lg font-semibold text-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      style={{
+                        backgroundColor: loading ? '#4A5D73' : '#0B1F3B',
+                        color: '#FFFFFF',
+                      }}
+                    >
+                      Link Number
+                    </button>
+                  </div>
+                  <p className="text-xs mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
+                    Find the phone number ID in the Vapi dashboard URL: <code className="bg-gray-200 px-1 rounded">/phone-numbers/[ID]</code>
+                  </p>
+                </div>
               </div>
             )}
           </div>
