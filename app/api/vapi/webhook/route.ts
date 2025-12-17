@@ -403,7 +403,7 @@ export async function POST(req: NextRequest) {
               
               if (messages.length > 0) {
                 finalTranscript = messages.join('\n');
-                console.log('[Vapi Webhook] Built transcript from messages array, length:', finalTranscript.length);
+                console.log('[Vapi Webhook] Built transcript from messages array, length:', finalTranscript?.length || 0);
                 fetchedData = true;
               }
             }
