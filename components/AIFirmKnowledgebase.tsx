@@ -54,6 +54,30 @@ export default function AIFirmKnowledgebase({ firm, onSave }: AIFirmKnowledgebas
 
       if (updateError) throw updateError;
 
+      // Update Vapi assistant if it exists
+      if (firm.vapi_assistant_id) {
+        try {
+          const updateResponse = await fetch('/api/vapi/update-assistant', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ firmId: firm.id }),
+          });
+
+          if (!updateResponse.ok) {
+            const errorData = await updateResponse.json();
+            console.warn('Assistant update warning:', errorData);
+            // Don't throw - settings are saved, assistant update is best-effort
+          } else {
+            console.log('Assistant updated successfully');
+          }
+        } catch (updateError) {
+          console.warn('Error updating assistant (non-blocking):', updateError);
+          // Don't throw - settings are saved, assistant update is best-effort
+        }
+      }
+
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
       if (onSave) onSave();
