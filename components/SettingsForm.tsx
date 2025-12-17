@@ -167,27 +167,8 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
         const newFirm = newFirmData as any;
         firmId = newFirm.id;
 
-        // Purchase and configure Twilio number ONLY for new firm creation (first save)
-        // The API endpoint also has a safety check to prevent duplicate purchases
-        try {
-          const purchaseResponse = await fetch('/api/twilio/purchase-number', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ firmId }),
-          });
-
-          if (!purchaseResponse.ok) {
-            const errorData = await purchaseResponse.json();
-            console.error('Error purchasing Twilio number:', errorData);
-            // Don't throw - allow firm creation to succeed even if number purchase fails
-            // User can retry later via a separate action if needed
-          }
-        } catch (purchaseError) {
-          console.error('Error calling purchase-number API:', purchaseError);
-          // Don't throw - allow firm creation to succeed
-        }
+        // Vapi phone number will be provisioned separately via the provision-number endpoint
+        // No automatic provisioning on firm creation
       }
 
       setSuccess(true);
@@ -384,106 +365,71 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
         </select>
       </div>
 
-            {/* Manual Twilio Number Input (for testing) */}
+            {/* Vapi Phone Number */}
             {firm && (
       <div>
                 <label 
-                  htmlFor="manual_twilio_number" 
+                  htmlFor="vapi_phone_number" 
                   className="block text-xs font-semibold uppercase tracking-wide mb-2"
                   style={{ color: '#4A5D73' }}
                 >
-                  IntakeGenie Number (Manual Entry for Testing)
+                  Phone Number
           </label>
                 <div className="flex gap-2">
-            <input
-                    type="tel"
-                    id="manual_twilio_number"
-                    pattern="^\+[1-9]\d{1,14}$"
-                    placeholder="+15551234567"
-                    className="flex-1 h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
-                    style={{
-                      borderColor: '#E5E7EB',
-                      backgroundColor: '#FFFFFF',
-                      fontSize: '14px',
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#0B1F3B';
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(11, 31, 59, 0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = '#E5E7EB';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                    value={manualTwilioNumber}
-                    onChange={(e) => setManualTwilioNumber(e.target.value)}
-                  />
                   <button
                     type="button"
                     onClick={async () => {
-                      if (!manualTwilioNumber || !manualTwilioNumber.match(/^\+[1-9]\d{1,14}$/)) {
-                        setError('Please enter a valid phone number in E.164 format (e.g., +15551234567)');
-                        return;
-                      }
                       if (!supabase || !firm) return;
                       
                       setLoading(true);
                       setError(null);
                       
                       try {
-                        const response = await fetch('/api/twilio/set-number', {
+                        const response = await fetch('/api/vapi/provision-number', {
                           method: 'POST',
                           headers: {
                             'Content-Type': 'application/json',
                           },
                           body: JSON.stringify({ 
-                            firmId: firm.id,
-                            phoneNumber: manualTwilioNumber 
+                            firmId: firm.id
                           }),
                         });
 
                         const data = await response.json();
                         
                         if (!response.ok) {
-                          const errorMsg = data.error || data.message || 'Failed to set Twilio number';
-                          const hint = data.hint ? ` ${data.hint}` : '';
-                          throw new Error(errorMsg + hint);
-                        }
-
-                        if (data.warning) {
-                          // Show warning but still consider it success
-                          setError(data.warning);
-                          setTimeout(() => setError(null), 5000);
+                          const errorMsg = data.error || data.message || 'Failed to provision number';
+                          throw new Error(errorMsg);
                         }
 
                         setSuccess(true);
-                        setManualTwilioNumber('');
                         setTimeout(() => {
                           setSuccess(false);
                           onSave();
                         }, 2000);
                       } catch (err: any) {
-                        console.error('Error setting number:', err);
-                        setError(err.message || 'Failed to set Twilio number. Check browser console for details.');
+                        console.error('Error provisioning number:', err);
+                        setError(err.message || 'Failed to provision number. Check browser console for details.');
                       } finally {
                         setLoading(false);
                       }
                     }}
-                    disabled={loading || !manualTwilioNumber}
+                    disabled={loading}
                     className="h-12 px-6 rounded-lg font-semibold text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
-                      backgroundColor: loading || !manualTwilioNumber ? '#4A5D73' : '#0B1F3B',
+                      backgroundColor: loading ? '#4A5D73' : '#0B1F3B',
                       color: '#FFFFFF',
                     }}
                   >
-                    Set Number
+                    {loading ? 'Provisioning...' : 'Provision Phone Number'}
                   </button>
                 </div>
                 <p className="mt-1.5 text-xs" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                  Paste your existing Twilio number here to test (E.164 format: +15551234567)
+                  Each firm is assigned a dedicated AI intake number automatically. Calls to this number are handled by IntakeGenie.
                 </p>
-                {firm.twilio_number && (
+                {(firm.vapi_phone_number || firm.twilio_number) && (
                   <p className="mt-2 text-sm font-medium" style={{ color: '#0B1F3B' }}>
-                    Current number: {firm.twilio_number}
+                    Current number: {firm.vapi_phone_number || firm.twilio_number}
                   </p>
                 )}
               </div>

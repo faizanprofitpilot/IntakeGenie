@@ -22,7 +22,8 @@ export interface Firm {
   open_time: string; // "09:00"
   close_time: string; // "17:00"
   failover_ring_seconds: number;
-  twilio_number: string | null;
+  twilio_number: string | null; // Deprecated - kept for migration
+  vapi_phone_number: string | null; // Vapi phone number
   ai_greeting_custom: string | null;
   ai_tone: AITone;
   ai_knowledge_base: string | null;
@@ -32,7 +33,8 @@ export interface Firm {
 export interface Call {
   id: string;
   firm_id: string;
-  twilio_call_sid: string;
+  twilio_call_sid: string | null; // Deprecated - kept for migration
+  vapi_conversation_id: string | null; // Vapi conversation ID
   from_number: string;
   to_number: string;
   started_at: string;

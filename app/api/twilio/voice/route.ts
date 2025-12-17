@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/clients/supabase';
-import { generateTwiML, twilioNumber, normalizeAppUrl, getTTSAudioUrl } from '@/lib/clients/twilio';
-import { isBusinessHoursOpen } from '@/lib/utils/business-hours';
-import { twiml } from 'twilio';
+import { generateTwiML } from '@/lib/clients/twilio';
 
 // Ensure this route is public (no authentication required)
 export const dynamic = 'force-dynamic';
@@ -24,130 +21,9 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('[Twilio Voice] POST request received');
-  try {
-    const formData = await request.formData();
-    console.log('[Twilio Voice] FormData parsed successfully');
-    const callSid = formData.get('CallSid') as string;
-    const fromNumber = formData.get('From') as string;
-    const toNumber = formData.get('To') as string;
-
-    if (!callSid || !fromNumber || !toNumber) {
-      // Error message - use fallback Twilio TTS for errors (faster, simpler)
-      return generateTwiML(
-        '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Error processing call. Please try again later.</Say><Hangup/></Response>'
-      );
-    }
-
-    const supabase = createServiceClient();
-
-    // Identify firm by To number (the Twilio number that received the call)
-    let firm: any;
-    const { data: firmData, error: firmError } = await supabase
-      .from('firms')
-      .select('*')
-      .eq('twilio_number', toNumber)
-      .single();
-
-    if (firmError || !firmData) {
-      console.error('Firm lookup error:', firmError);
-      // Fallback: try legacy env var approach for backward compatibility
-    if (process.env.FIRM_ID) {
-        const { data: fallbackFirm, error: fallbackError } = await supabase
-        .from('firms')
-        .select('*')
-        .eq('id', process.env.FIRM_ID)
-        .single();
-
-        if (fallbackError || !fallbackFirm) {
-        return generateTwiML(
-            '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Service configuration error. Please contact support.</Say><Hangup/></Response>'
-        );
-      }
-        firm = fallbackFirm;
-    } else {
-        return generateTwiML(
-          '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">Service configuration error. Please contact support.</Say><Hangup/></Response>'
-        );
-      }
-    } else {
-      firm = firmData;
-    }
-
-    // Determine routing
-    const isOpen = isBusinessHoursOpen(firm);
-    const routeReason = isOpen ? 'no_answer' : 'after_hours';
-
-    // Create call record
-    const { data: callRecord, error: callError } = await supabase
-      .from('calls')
-      // @ts-ignore - Supabase type inference issue
-      .insert({
-        firm_id: firm.id,
-        twilio_call_sid: callSid,
-        from_number: fromNumber,
-        to_number: toNumber,
-        route_reason: routeReason,
-        status: 'in_progress',
-        urgency: 'normal',
-      })
-      .select()
-      .single();
-
-    if (callError) {
-      console.error('Error creating call record:', callError);
-    }
-
-    const response = new twiml.VoiceResponse();
-
-    // Routing logic
-    if (!isOpen && (firm.mode === 'after_hours' || firm.mode === 'both')) {
-      // After hours - route directly to agent
-      // Use redirect to stream endpoint which handles Gather flow
-      const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
-      response.redirect(
-        `${appUrl}/api/twilio/stream?callSid=${callSid}&firmId=${firm.id}`
-      );
-    } else if (isOpen && (firm.mode === 'failover' || firm.mode === 'both')) {
-      // Business hours - try to forward, with failover to agent
-      const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
-      const dial = response.dial({
-        timeout: firm.failover_ring_seconds,
-        action: `${appUrl}/api/twilio/failover?firmId=${firm.id}&callSid=${callSid}`,
-        method: 'POST',
-        record: 'record-from-answer',
-      });
-      dial.number(firm.forward_to_number);
-    } else if (isOpen && firm.mode === 'after_hours') {
-      // Business hours but only after-hours mode enabled - just forward
-      const dial = response.dial({
-        record: 'record-from-answer',
-      });
-      dial.number(firm.forward_to_number);
-    } else {
-      // Closed and no after-hours mode - hang up
-      // Use premium TTS for this message
-      const closedText = 'Our office is currently closed. Please call back during business hours.';
-      try {
-        const { playUrl, fallbackText } = await getTTSAudioUrl(closedText, callSid, 'closed');
-        if (playUrl) {
-          response.play(playUrl);
-        } else {
-          response.say({ voice: 'alice' }, fallbackText);
-        }
-      } catch (error) {
-        console.error('[Voice] TTS error, using fallback:', error);
-        response.say({ voice: 'alice' }, closedText);
-      }
-      response.hangup();
-    }
-
-    return generateTwiML(response.toString());
-  } catch (error) {
-    console.error('Error in voice webhook:', error);
-    return generateTwiML(
-      '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">An error occurred. Please try again later.</Say><Hangup/></Response>'
-    );
-  }
+  // Twilio voice routes are disabled - IntakeGenie is now Vapi-exclusive
+  console.log('[Twilio Voice] POST request received but disabled - Vapi-exclusive mode');
+  return generateTwiML(
+    '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice">This service is no longer available via Twilio. Please contact support.</Say><Hangup/></Response>'
+  );
 }
-

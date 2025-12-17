@@ -124,7 +124,7 @@ export default async function DashboardPage() {
                       </div>
 
               {/* IntakeGenie Number Card */}
-              {firm.twilio_number && (
+              {(firm.vapi_phone_number || firm.twilio_number) && (
                 <div 
                   className="bg-white rounded-xl shadow-sm p-8"
                   style={{
@@ -137,7 +137,7 @@ export default async function DashboardPage() {
                     </h2>
                     </div>
                   <div className="text-2xl font-bold" style={{ color: '#0B1F3B' }}>
-                    {firm.twilio_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')}
+                    {(firm.vapi_phone_number || firm.twilio_number || '').replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')}
                   </div>
                 </div>
               )}
