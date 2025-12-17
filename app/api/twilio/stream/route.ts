@@ -30,8 +30,8 @@ async function generateGreeting(response: twiml.VoiceResponse, callSid: string |
     // Use custom greeting, replacing {FIRM_NAME} placeholder
     greetingText = customGreeting.replace(/{FIRM_NAME}/g, firmNameText);
   } else {
-    // Use default greeting
-    greetingText = `Thank you for calling ${firmNameText}. I'm an automated assistant for the firm. I can't give legal advice. But I can collect your information so the firm can follow up. Are you in a safe place to talk right now?`;
+    // Use canonical greeting script
+    greetingText = `Thank you for calling ${firmNameText}. I'm an automated assistant for the firm. I can't give legal advice, but I can collect details so the firm can follow up. Are you in a safe place to talk right now?`;
   }
   
   try {
