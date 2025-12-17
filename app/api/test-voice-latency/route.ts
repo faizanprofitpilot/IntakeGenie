@@ -17,7 +17,7 @@ export const runtime = 'nodejs';
  */
 export async function GET(request: NextRequest) {
   const results = {
-    timings: {} as Record<string, number>,
+    timings: {} as Record<string, number | boolean>,
     errors: [] as string[],
     summary: '',
   };
