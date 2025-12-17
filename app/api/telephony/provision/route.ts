@@ -180,60 +180,28 @@ export async function POST(req: NextRequest) {
     const twilioPhoneNumber = purchasedNumber.phoneNumber; // E.164 format
     const twilioSid = purchasedNumber.sid;
 
-    // Step 3: Create Vapi credential for Twilio (if needed) and import number
-    console.log('[Telephony Provision] Step 3: Creating Vapi credential and importing Twilio number...');
+    // Step 3: Import Twilio number into Vapi
+    // According to Vapi Postman docs: https://www.postman.com/vapiai/public-workspace/request/l2eelnz/import-twilio-number
+    // Use the specific import endpoint: /phone-number/import/twilio
+    // This endpoint accepts credentials directly - no need to create credential separately
+    console.log('[Telephony Provision] Step 3: Importing Twilio number into Vapi...');
     let vapiPhoneNumberId: string;
-    let credentialId: string | null = null;
     // Declare importPayload outside try block for error logging
     let importPayload: any = null;
     
     try {
-      // Step 3a: Create or get Twilio credential in Vapi
-      // Vapi requires credentials to be created separately before importing numbers
-      console.log('[Telephony Provision] Step 3a: Creating Twilio credential in Vapi...');
-      try {
-        const credentialPayload = cleanVapiPayload({
-          provider: 'twilio',
-          twilioAccountSid: accountSid,
-          twilioAuthToken: authToken,
-        });
-
-        console.log('[Telephony Provision] Creating credential with payload:', JSON.stringify(credentialPayload, null, 2));
-        const credentialResponse = await vapi.post('/credential', credentialPayload);
-        credentialId = credentialResponse.data.id;
-        console.log('[Telephony Provision] Credential created:', credentialId);
-      } catch (credError: any) {
-        // If credential already exists, try to find it
-        console.warn('[Telephony Provision] Credential creation failed, may already exist:', credError?.response?.data || credError?.message);
-        // Continue without credential ID - Vapi might accept direct credentials
-      }
-
-      // Step 3b: Import Twilio number into Vapi
-      // Try multiple formats based on Vapi API documentation
-      console.log('[Telephony Provision] Step 3b: Importing Twilio number into Vapi...');
-      
-      if (credentialId) {
-        // Use credential ID if we have it
-        importPayload = cleanVapiPayload({
-          provider: 'byo-phone-number',
-          number: twilioPhoneNumber,
-          credentialId: credentialId,
-          assistantId: assistantId,
-        });
-      } else {
-        // Try direct credentials (alternative format)
-        importPayload = cleanVapiPayload({
-          provider: 'byo-phone-number',
-          number: twilioPhoneNumber,
-          twilioAccountSid: accountSid,
-          twilioAuthToken: authToken,
-          assistantId: assistantId,
-        });
-      }
+      // Build import payload according to Vapi API spec
+      // The import endpoint expects: number (E.164), twilioAccountSid, twilioAuthToken
+      importPayload = cleanVapiPayload({
+        number: twilioPhoneNumber, // E.164 format (e.g., +15551234567)
+        twilioAccountSid: accountSid,
+        twilioAuthToken: authToken,
+      });
 
       console.log('[Telephony Provision] Vapi import payload:', JSON.stringify(importPayload, null, 2));
 
-      const importResponse = await vapi.post('/phone-number', importPayload);
+      // Use the specific Twilio import endpoint as per Postman docs
+      const importResponse = await vapi.post('/phone-number/import/twilio', importPayload);
       vapiPhoneNumberId = importResponse.data.id;
 
       if (!vapiPhoneNumberId) {
