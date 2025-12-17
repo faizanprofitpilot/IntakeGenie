@@ -65,12 +65,15 @@ export async function POST(req: NextRequest) {
     );
 
     // Update assistant with new configuration
-    // Vapi PATCH requires specific field structure - update model.messages for system prompt changes
+    // Vapi PATCH: Include all fields that should be updated
+    // According to Vapi docs, when updating nested objects, include the complete object
     try {
-      // Build the update payload - update model messages to reflect new system prompt
+      // Build the update payload - include all configuration fields
       const assistantPayload: any = {
-        model: agentConfig.model,
-        firstMessage: agentConfig.firstMessage,
+        model: agentConfig.model, // Complete model object with messages
+        voice: agentConfig.voice, // Voice configuration
+        transcriber: agentConfig.transcriber, // Transcriber configuration
+        firstMessage: agentConfig.firstMessage, // Updated greeting
       };
       
       // Add stopSpeakingPlan to prevent interruptions

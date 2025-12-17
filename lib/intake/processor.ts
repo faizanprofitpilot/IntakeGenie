@@ -10,10 +10,12 @@ export async function upsertCall({
   conversationId,
   firmId,
   intake,
+  phoneNumber,
 }: {
   conversationId: string;
   firmId?: string;
   intake?: any;
+  phoneNumber?: string;
 }): Promise<{ success: boolean; callId?: string; error?: any }> {
   const supabase = createServiceClient();
 
@@ -71,7 +73,7 @@ export async function upsertCall({
         status: 'in_progress',
         urgency: intake?.urgency_level === 'high' ? 'high' : intake?.emergency_redirected ? 'emergency_redirected' : 'normal',
         started_at: new Date().toISOString(),
-        from_number: '', // Will be updated in finalizeCall
+        from_number: phoneNumber || '', // Caller's number
         to_number: toNumber,
         route_reason: 'after_hours', // Default for Vapi calls
         twilio_call_sid: null, // Vapi calls don't have Twilio call SID
@@ -108,11 +110,13 @@ export async function finalizeCall({
   transcript,
   phoneNumber,
   firmId,
+  intake,
 }: {
   conversationId: string;
   transcript?: string;
   phoneNumber?: string;
   firmId?: string;
+  intake?: any;
 }) {
   const supabase = createServiceClient();
 
@@ -166,10 +170,20 @@ export async function finalizeCall({
       
       // Use the newly created call
       const call = newCall as any;
-      const intake = (call.intake_json as IntakeData) || {};
+      // Use provided intake data, or fall back to existing intake_json
+      const finalIntake = intake || (call.intake_json as IntakeData) || {};
+      
+      // Update call with intake data if provided
+      if (intake && Object.keys(intake).length > 0) {
+        await supabase
+          .from('calls')
+          // @ts-ignore
+          .update({ intake_json: intake as IntakeData })
+          .eq('id', call.id);
+      }
       
       // Continue with finalization
-      await finalizeCallRecord(supabase, call, intake, transcript, phoneNumber);
+      await finalizeCallRecord(supabase, call, finalIntake, transcript, phoneNumber);
     } else {
       console.error('[Finalize Call] Cannot create call - no firmId provided. Conversation ID:', conversationId);
       console.error('[Finalize Call] This means the webhook could not find the firm. Check server logs for firm lookup errors.');
@@ -177,8 +191,9 @@ export async function finalizeCall({
     }
   } else {
     const call = callData as any;
-    const intake = (call.intake_json as IntakeData) || {};
-    await finalizeCallRecord(supabase, call, intake, transcript, phoneNumber);
+    // Use provided intake data, or fall back to existing intake_json
+    const finalIntake = intake || (call.intake_json as IntakeData) || {};
+    await finalizeCallRecord(supabase, call, finalIntake, transcript, phoneNumber);
   }
 }
 
@@ -190,16 +205,23 @@ async function finalizeCallRecord(
   phoneNumber?: string
 ) {
 
-  // Update call with transcript and end time
+  // Update call with transcript, intake data, caller number, and end time
+  const updateData: any = {
+    transcript_text: transcript || null,
+    from_number: phoneNumber || call.from_number || '',
+    ended_at: new Date().toISOString(),
+    status: 'summarizing',
+  };
+  
+  // Update intake_json if we have intake data
+  if (intake && Object.keys(intake).length > 0) {
+    updateData.intake_json = intake as IntakeData;
+  }
+  
   const { error: updateError } = await supabase
     .from('calls')
     // @ts-ignore
-    .update({
-      transcript_text: transcript || null,
-      from_number: phoneNumber || call.from_number || '',
-      ended_at: new Date().toISOString(),
-      status: 'summarizing',
-    })
+    .update(updateData)
     .eq('id', call.id);
   
   if (updateError) {

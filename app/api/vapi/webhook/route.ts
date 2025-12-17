@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/clients/supabase';
 import { upsertCall, finalizeCall } from '@/lib/intake/processor';
+import { vapi } from '@/lib/clients/vapi';
 
 // Ensure this route is public (no authentication required)
 export const dynamic = 'force-dynamic';
@@ -51,7 +52,9 @@ export async function POST(req: NextRequest) {
       }
       
       conversation_id = message.call?.id || message.conversation_id;
-      phoneNumber = message.phoneNumber?.number || message.call?.customer?.number;
+      // IMPORTANT: caller number is in call.customer.number, NOT phoneNumber.number
+      // phoneNumber.number is the Vapi number being called, not the caller
+      phoneNumber = message.call?.customer?.number || message.customer?.number;
       phoneNumberId = message.phoneNumber?.id;
       metadata = message.assistant?.metadata || message.metadata;
       
@@ -84,7 +87,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Extract phone number from various possible locations
-    const actualPhoneNumber = phoneNumber || body.phoneNumber?.number || body.phoneNumber;
+    // IMPORTANT: We want the CALLER's number, not the Vapi number
+    // The caller is in: call.customer.number, customer.number, or phoneNumber (old format)
+    // The Vapi number (being called) is in: phoneNumber.number (new format) - we DON'T want this
+    const actualPhoneNumber = phoneNumber || body.call?.customer?.number || body.customer?.number || body.phoneNumber;
     const actualPhoneNumberId = phoneNumberId || body.phoneNumber?.id || body.phoneNumberId;
 
     console.log('[Vapi Webhook] Event:', event);
@@ -215,6 +221,7 @@ export async function POST(req: NextRequest) {
           conversationId: conversation_id,
           firmId: firmId,
           intake: structuredData,
+          phoneNumber: actualPhoneNumber, // Pass caller's number
         });
         if (result.success) {
           console.log('[Vapi Webhook] Call upserted successfully');
@@ -234,7 +241,7 @@ export async function POST(req: NextRequest) {
       // Finalize call: save transcript, generate summary, send email
       console.log('[Vapi Webhook] Processing conversation.completed event');
       
-      // Extract transcript from various locations
+      // Extract transcript from various locations in webhook
       let finalTranscript = transcript;
       if (!finalTranscript && body.message?.artifact?.transcript) {
         finalTranscript = body.message.artifact.transcript;
@@ -243,15 +250,88 @@ export async function POST(req: NextRequest) {
         finalTranscript = body.transcript;
       }
       
-      console.log('[Vapi Webhook] Transcript length:', finalTranscript?.length || 0);
+      // If transcript is still missing, fetch it from Vapi API
+      let finalStructuredData = structuredData;
+      let finalCallerNumber = actualPhoneNumber;
+      
+      if (!finalTranscript || !finalStructuredData || !finalCallerNumber) {
+        console.log('[Vapi Webhook] Missing data, fetching from Vapi API...');
+        console.log('[Vapi Webhook] Missing transcript:', !finalTranscript);
+        console.log('[Vapi Webhook] Missing structured data:', !finalStructuredData);
+        console.log('[Vapi Webhook] Missing caller number:', !finalCallerNumber);
+        
+        try {
+          // Fetch call data from Vapi API
+          // Use conversation_id as call ID
+          const callResponse = await vapi.get(`/call/${conversation_id}`);
+          const callData = callResponse.data;
+          
+          console.log('[Vapi Webhook] Fetched call data from API:', JSON.stringify(callData, null, 2));
+          
+          // Extract transcript from API response
+          if (!finalTranscript && callData.transcript) {
+            finalTranscript = callData.transcript;
+            console.log('[Vapi Webhook] Found transcript in API response, length:', finalTranscript?.length || 0);
+          }
+          
+          // Extract structured data from API response
+          if (!finalStructuredData && callData.structuredData) {
+            finalStructuredData = callData.structuredData;
+            console.log('[Vapi Webhook] Found structured data in API response');
+          }
+          
+          // Extract caller number from API response
+          if (!finalCallerNumber && callData.customer?.number) {
+            finalCallerNumber = callData.customer.number;
+            console.log('[Vapi Webhook] Found caller number in API response:', finalCallerNumber);
+          }
+          
+          // Also extract messages/transcript from messages array if available
+          if (!finalTranscript && callData.messages && Array.isArray(callData.messages)) {
+            const messages = callData.messages
+              .filter((msg: any) => msg.type === 'transcript' || msg.role === 'user' || msg.role === 'assistant')
+              .map((msg: any) => {
+                if (msg.type === 'transcript') {
+                  return `${msg.role === 'user' ? 'Caller' : 'Assistant'}: ${msg.transcript || msg.content || ''}`;
+                }
+                return `${msg.role === 'user' ? 'Caller' : 'Assistant'}: ${msg.content || ''}`;
+              });
+            if (messages.length > 0) {
+              finalTranscript = messages.join('\n');
+              console.log('[Vapi Webhook] Built transcript from messages array, length:', finalTranscript?.length || 0);
+            }
+          }
+        } catch (apiError: any) {
+          console.error('[Vapi Webhook] Error fetching call data from API:', apiError?.response?.data || apiError?.message);
+          console.error('[Vapi Webhook] API error status:', apiError?.response?.status);
+          // Continue with what we have from webhook
+        }
+      }
+      
+      console.log('[Vapi Webhook] Final transcript length:', finalTranscript?.length || 0);
+      console.log('[Vapi Webhook] Final structured data:', JSON.stringify(finalStructuredData, null, 2));
       console.log('[Vapi Webhook] Ended reason:', body.message?.endedReason);
+      
+      // If we have structured data but no transcript, try to build a basic transcript from structured data
+      if (!finalTranscript && finalStructuredData) {
+        const transcriptParts: string[] = [];
+        if (finalStructuredData.full_name) transcriptParts.push(`Caller: ${finalStructuredData.full_name}`);
+        if (finalStructuredData.callback_number) transcriptParts.push(`Phone: ${finalStructuredData.callback_number}`);
+        if (finalStructuredData.reason_for_call) transcriptParts.push(`Reason: ${finalStructuredData.reason_for_call}`);
+        if (finalStructuredData.incident_details) transcriptParts.push(`Details: ${finalStructuredData.incident_details}`);
+        if (transcriptParts.length > 0) {
+          finalTranscript = transcriptParts.join('\n');
+          console.log('[Vapi Webhook] Built basic transcript from structured data');
+        }
+      }
       
       try {
         await finalizeCall({
           conversationId: conversation_id,
           transcript: finalTranscript,
-          phoneNumber: actualPhoneNumber,
+          phoneNumber: finalCallerNumber || actualPhoneNumber, // Use caller number from API if available
           firmId: firmId,
+          intake: finalStructuredData, // Pass structured data if we fetched it
         });
         console.log('[Vapi Webhook] Call finalized successfully');
       } catch (finalizeError: any) {
