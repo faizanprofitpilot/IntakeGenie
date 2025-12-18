@@ -252,15 +252,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, warning: 'No conversation_id' });
     }
 
-    if (event === 'conversation.updated' || (event === 'status-update' && body.message?.status !== 'ended')) {
-      // Update call with latest intake data
-      console.log('[Vapi Webhook] Processing conversation.updated event');
+    // Create/update call record for ANY status-update or conversation.updated event (except ended)
+    // This ensures calls appear immediately when they start, even before structured data is available
+    if (event === 'conversation.updated' || 
+        (event === 'status-update' && body.message?.status !== 'ended') ||
+        (body.message?.type === 'status-update' && body.message?.status && body.message.status !== 'ended')) {
+      // Create or update call with latest intake data
+      // Even if structured data is empty, we still create the call record so it appears immediately
+      console.log('[Vapi Webhook] Processing call update event');
+      console.log('[Vapi Webhook] Event:', event);
+      console.log('[Vapi Webhook] Status:', body.message?.status);
       console.log('[Vapi Webhook] Structured data:', JSON.stringify(structuredData, null, 2));
       try {
         const result = await upsertCall({
           conversationId: conversation_id,
           firmId: firmId,
-          intake: structuredData,
+          intake: structuredData, // May be undefined/empty for initial call start
           phoneNumber: actualPhoneNumber, // Pass caller's number
         });
         if (result.success) {

@@ -1,5 +1,6 @@
 // Core data types for IntakeGenie
 
+// Deprecated - no longer used, kept for backward compatibility
 export type RoutingMode = 'after_hours' | 'failover' | 'both';
 
 export type CallStatus = 'in_progress' | 'transcribing' | 'summarizing' | 'emailed' | 'error';
@@ -15,13 +16,14 @@ export interface Firm {
   owner_user_id: string;
   firm_name: string;
   timezone: string;
-  forward_to_number: string;
+  // Deprecated fields - no longer used in UI, kept for backward compatibility with database
+  forward_to_number?: string; // Deprecated - users handle forwarding on their end
   notify_emails: string[];
-  mode: RoutingMode;
-  open_days: number[]; // 0-6, where 0 is Sunday
-  open_time: string; // "09:00"
-  close_time: string; // "17:00"
-  failover_ring_seconds: number;
+  mode?: RoutingMode; // Deprecated - system is always on
+  open_days?: number[]; // Deprecated - system is always on
+  open_time?: string; // Deprecated - system is always on
+  close_time?: string; // Deprecated - system is always on
+  failover_ring_seconds?: number; // Deprecated - no routing rules
   twilio_number: string | null; // Deprecated - kept for migration
   vapi_phone_number: string | null; // Deprecated - kept for migration
   vapi_phone_number_id: string | null; // Vapi phone number ID for API lookups
