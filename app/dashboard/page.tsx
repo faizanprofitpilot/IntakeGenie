@@ -25,11 +25,12 @@ export default async function DashboardPage() {
     .select('*')
     .eq('owner_user_id', session.user.id)
     .limit(1)
-    .single();
+    .maybeSingle(); // Use maybeSingle() instead of single() - returns null instead of error when no row found
 
-  if (firmError) {
+  // Check for actual errors (not just "no rows found")
+  if (firmError && firmError.code !== 'PGRST116') {
     console.error('[Dashboard] Error fetching firm:', firmError);
-    // Return error state instead of crashing
+    // Return error state only for real errors
     return (
       <PlatformLayout>
         <div className="p-8">
@@ -41,7 +42,7 @@ export default async function DashboardPage() {
     );
   }
 
-  const firm = firmData as any;
+  const firm = firmData || null;
 
   // Get recent calls count
   const { count: callsCount } = await supabase
