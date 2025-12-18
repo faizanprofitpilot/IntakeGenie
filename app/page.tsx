@@ -578,7 +578,7 @@ function LandingPageContent() {
           {isAuthenticated ? (
             <Link
               href="/dashboard"
-              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block bg-white hover:bg-gray-100 hover:scale-105 hover:shadow-xl cursor-pointer"
+              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block bg-[#F5F3ED] hover:bg-[#EDE9E0] hover:scale-105 hover:shadow-xl cursor-pointer"
               style={{ color: '#0B1F3B' }}
             >
               Go to Dashboard
@@ -586,7 +586,7 @@ function LandingPageContent() {
           ) : (
             <Link
               href="/login"
-              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block bg-white hover:bg-gray-100 hover:scale-105 hover:shadow-xl cursor-pointer"
+              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block bg-[#F5F3ED] hover:bg-[#EDE9E0] hover:scale-105 hover:shadow-xl cursor-pointer"
               style={{ color: '#0B1F3B' }}
             >
               Start Your Free Trial
