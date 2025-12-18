@@ -6,12 +6,13 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const method = request.method;
 
-  // Public routes - allow landing page, login, ALL Twilio webhook routes, Vapi webhook route, audio endpoints, and test endpoints
+  // Public routes - allow landing page, login, ALL Twilio webhook routes, Vapi webhook route, Stripe webhook route, audio endpoints, and test endpoints
   // This check happens FIRST before any Supabase client creation to avoid 401 errors
   // CRITICAL: Return immediately for webhook routes and audio endpoints to prevent any interference
   const publicRoutes = [
     '/api/twilio',
     '/api/vapi/webhook', // Vapi webhook route (must be public for Vapi to call it)
+    '/api/stripe/webhook', // Stripe webhook route (must be public for Stripe to call it)
     '/api/audio',
     '/api/process-call', // Allow process-call (called by Twilio and watchdog)
     '/api/test-email',
@@ -20,9 +21,10 @@ export async function middleware(request: NextRequest) {
     '/api/test-transcription',
   ];
   
-  // Check if this is a public route - must check exact match for /api/vapi/webhook first
+  // Check if this is a public route - must check exact match for webhook routes first
   const isPublicRoute = 
     pathname === '/api/vapi/webhook' ||
+    pathname === '/api/stripe/webhook' ||
     pathname.startsWith('/api/twilio') ||
     pathname.startsWith('/api/audio') ||
     pathname.startsWith('/api/process-call') ||
