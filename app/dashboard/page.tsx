@@ -35,17 +35,17 @@ export default async function DashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('firm_id', firm?.id || '');
 
-  // Get leads count (calls where customer provided their phone number)
-  // A lead is defined as a call with a callback_number in intake_json that is not null/empty
-  // Using PostgREST JSONB operator: intake_json->>'callback_number' extracts text value
+  // Get leads count (calls where customer provided their name)
+  // A lead is defined as a call with a full_name in intake_json that is not null/empty
+  // Using PostgREST JSONB operator: intake_json->>'full_name' extracts text value
   let leadsCount = 0;
   try {
     const { count, error } = await supabase
       .from('calls')
       .select('*', { count: 'exact', head: true })
       .eq('firm_id', firm?.id || '')
-      .not('intake_json->>callback_number', 'is', null)
-      .neq('intake_json->>callback_number', '');
+      .not('intake_json->>full_name', 'is', null)
+      .neq('intake_json->>full_name', '');
     
     if (error) {
       console.error('[Dashboard] Error counting leads, using fallback:', error);
@@ -57,7 +57,7 @@ export default async function DashboardPage() {
       
       leadsCount = (allCalls || []).filter((call: any) => {
         const intake = call.intake_json as any;
-        return intake?.callback_number && intake.callback_number.trim().length > 0;
+        return intake?.full_name && intake.full_name.trim().length > 0;
       }).length;
     } else {
       leadsCount = count || 0;
@@ -72,7 +72,7 @@ export default async function DashboardPage() {
     
     leadsCount = (allCalls || []).filter((call: any) => {
       const intake = call.intake_json as any;
-      return intake?.callback_number && intake.callback_number.trim().length > 0;
+      return intake?.full_name && intake.full_name.trim().length > 0;
     }).length;
   }
 
@@ -148,9 +148,6 @@ export default async function DashboardPage() {
                       </div>
                   <div className="text-3xl font-bold" style={{ color: '#0B1F3B' }}>
                     {leadsCount || 0}
-                  </div>
-                  <div className="text-xs mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                    Calls with phone numbers
                   </div>
                 </div>
                 <div 
