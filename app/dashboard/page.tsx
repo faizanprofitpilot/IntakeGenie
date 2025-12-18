@@ -20,12 +20,26 @@ export default async function DashboardPage() {
   }
 
   // Get user's firm
-  const { data: firmData } = await supabase
+  const { data: firmData, error: firmError } = await supabase
     .from('firms')
     .select('*')
     .eq('owner_user_id', session.user.id)
     .limit(1)
     .single();
+
+  if (firmError) {
+    console.error('[Dashboard] Error fetching firm:', firmError);
+    // Return error state instead of crashing
+    return (
+      <PlatformLayout>
+        <div className="p-8">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <p>Error loading firm data. Please try refreshing the page.</p>
+          </div>
+        </div>
+      </PlatformLayout>
+    );
+  }
 
   const firm = firmData as any;
 
@@ -167,11 +181,7 @@ export default async function DashboardPage() {
 
               {/* Phone Number Provision/Display */}
               <PhoneNumberProvision 
-                firm={firm} 
-                onProvisioned={() => {
-                  // Force page refresh to show updated number
-                  window.location.reload();
-                }}
+                firm={firm}
               />
 
               {/* Firm Settings Summary */}

@@ -23,8 +23,13 @@ export default function PhoneNumberProvision({ firm, onProvisioned }: PhoneNumbe
     }
   }, []);
 
+  // If no firm, return null
+  if (!firm) {
+    return null;
+  }
+
   // If number exists, just display it
-  if (firm && (firm.inbound_number_e164 || firm.vapi_phone_number || firm.twilio_number)) {
+  if (firm.inbound_number_e164 || firm.vapi_phone_number || firm.twilio_number) {
     return (
       <div 
         className="bg-white rounded-xl shadow-sm p-8"
@@ -39,28 +44,28 @@ export default function PhoneNumberProvision({ firm, onProvisioned }: PhoneNumbe
         </div>
         <PhoneNumberDisplay
           phoneNumber={
-            firm.inbound_number_e164 
+            firm?.inbound_number_e164 
               ? firm.inbound_number_e164
-              : firm.vapi_phone_number && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/)
+              : firm?.vapi_phone_number && typeof firm.vapi_phone_number === 'string' && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/)
                 ? firm.vapi_phone_number
-                : firm.twilio_number
+                : firm?.twilio_number && typeof firm.twilio_number === 'string'
                   ? firm.twilio_number
                   : null
           }
           formattedNumber={
-            firm.inbound_number_e164 
+            firm?.inbound_number_e164 && typeof firm.inbound_number_e164 === 'string'
               ? firm.inbound_number_e164.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
-              : firm.vapi_phone_number && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/) 
+              : firm?.vapi_phone_number && typeof firm.vapi_phone_number === 'string' && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/) 
                 ? firm.vapi_phone_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
-                : firm.twilio_number 
+                : firm?.twilio_number && typeof firm.twilio_number === 'string'
                   ? firm.twilio_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
-                  : firm.vapi_phone_number_id
+                  : firm?.vapi_phone_number_id
                     ? 'Number being assigned...'
                     : 'No number assigned'
           }
-          isPending={!!firm.vapi_phone_number_id && !firm.inbound_number_e164}
+          isPending={!!(firm?.vapi_phone_number_id && !firm?.inbound_number_e164)}
         />
-        {firm.vapi_phone_number_id && !firm.inbound_number_e164 && (
+        {firm?.vapi_phone_number_id && !firm?.inbound_number_e164 && (
           <p className="text-sm mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
             The number is being assigned. It will appear here automatically once ready.
             {' '}
@@ -74,7 +79,7 @@ export default function PhoneNumberProvision({ firm, onProvisioned }: PhoneNumbe
             </a>
           </p>
         )}
-        {firm.inbound_number_e164 && firm.telephony_provider && (
+        {firm?.inbound_number_e164 && firm?.telephony_provider && (
           <p className="text-xs mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
             Provider: {firm.telephony_provider === 'twilio_imported_into_vapi' ? 'Twilio + Vapi' : firm.telephony_provider}
           </p>
@@ -84,9 +89,6 @@ export default function PhoneNumberProvision({ firm, onProvisioned }: PhoneNumbe
   }
 
   // If no number exists, show provisioning UI
-  if (!firm) {
-    return null;
-  }
 
   const handleProvision = async () => {
     if (!supabase || !firm) return;
@@ -124,19 +126,28 @@ export default function PhoneNumberProvision({ firm, onProvisioned }: PhoneNumbe
           errorMsg = 'A phone number has already been provisioned for this firm. Only one number is allowed per firm.';
           // Refresh after a delay
           setTimeout(() => {
-            if (onProvisioned) onProvisioned();
+            if (typeof window !== 'undefined') {
+              window.location.reload();
+            } else if (onProvisioned) {
+              onProvisioned();
+            }
           }, 1000);
         }
         
         throw new Error(errorMsg);
       }
 
-      setSuccess(true);
-      setAreaCode('');
-      setTimeout(() => {
-        setSuccess(false);
-        if (onProvisioned) onProvisioned();
-      }, 2000);
+           setSuccess(true);
+           setAreaCode('');
+           setTimeout(() => {
+             setSuccess(false);
+             // Refresh the page to show the new number
+             if (typeof window !== 'undefined') {
+               window.location.reload();
+             } else if (onProvisioned) {
+               onProvisioned();
+             }
+           }, 2000);
     } catch (err: any) {
       console.error('Error provisioning number:', err);
       setError(err.message || 'Failed to provision number. Check browser console for details.');
