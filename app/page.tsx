@@ -141,14 +141,14 @@ function LandingPageContent() {
           {/* Left Column - Text Content */}
           <div className="text-left overflow-visible animate-fade-in-up">
             <h1 
-              className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight transition-all duration-1000 ${
+              className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 leading-tight transition-all duration-1000 ${
                 isVisible['hero'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               }`}
               style={{ color: '#0B1F3B' }}
             >
               Never Miss a{' '}
               <span 
-                className="block leading-tight mt-2 animate-gradient bg-gradient-to-r from-[#0B1F3B] via-[#4A5D73] to-[#C9A24D] bg-clip-text text-transparent bg-[length:200%_auto]"
+                className="block leading-tight mt-0 animate-gradient bg-gradient-to-r from-[#0B1F3B] via-[#4A5D73] to-[#C9A24D] bg-clip-text text-transparent bg-[length:200%_auto]"
                 style={{ 
                   background: 'linear-gradient(to right, #0B1F3B, #C9A24D)',
                   WebkitBackgroundClip: 'text',
@@ -162,7 +162,7 @@ function LandingPageContent() {
               </span>
             </h1>
             <p 
-              className={`text-lg sm:text-xl mb-6 transition-all duration-1000 delay-200 ${
+              className={`text-base sm:text-lg mb-6 transition-all duration-1000 delay-200 ${
                 isVisible['hero'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               }`}
               style={{ color: '#4A5D73' }}
@@ -171,7 +171,7 @@ function LandingPageContent() {
               Get structured summaries delivered to your inbox instantly.
             </p>
             <p 
-              className={`text-sm sm:text-base mb-8 transition-all duration-1000 delay-300 ${
+              className={`text-xs sm:text-sm mb-8 transition-all duration-1000 delay-300 ${
                 isVisible['hero'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               }`}
               style={{ color: '#4A5D73' }}
@@ -186,7 +186,7 @@ function LandingPageContent() {
               {isAuthenticated ? (
                 <Link
                   href="/dashboard"
-                  className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-1 text-white hover:[background-color:#0A1A33] cursor-pointer text-center"
+                  className="px-6 py-3 rounded-lg text-base font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-1 text-white hover:[background-color:#0A1A33] cursor-pointer text-center"
                   style={{ backgroundColor: '#0B1F3B' }}
                 >
                   Go to Dashboard
@@ -194,7 +194,7 @@ function LandingPageContent() {
               ) : (
                 <Link
                   href="/login"
-                  className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-1 text-white hover:[background-color:#0A1A33] cursor-pointer text-center"
+                  className="px-6 py-3 rounded-lg text-base font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-1 text-white hover:[background-color:#0A1A33] cursor-pointer text-center"
                   style={{ backgroundColor: '#0B1F3B' }}
                 >
                   Start Free Trial - No Credit Card
@@ -202,7 +202,7 @@ function LandingPageContent() {
               )}
               <Link
                 href="#features"
-                className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg border-2 bg-white hover:[background-color:#F5F7FA] hover:scale-105 transform hover:-translate-y-1 cursor-pointer text-center"
+                className="px-6 py-3 rounded-lg text-base font-semibold transition-all duration-300 shadow-lg border-2 bg-white hover:[background-color:#F5F7FA] hover:scale-105 transform hover:-translate-y-1 cursor-pointer text-center"
                 style={{ color: '#0B1F3B', borderColor: '#0B1F3B' }}
               >
                 See How It Works
@@ -216,16 +216,11 @@ function LandingPageContent() {
               isVisible['hero'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
             }`}
           >
-            <div className="relative w-full max-w-lg lg:max-w-xl">
-              <img
-                src="/hero-illustration.png"
-                alt="IntakeGenie AI Assistant"
-                className="w-full h-auto rounded-2xl shadow-2xl hover:shadow-3xl transition-all duration-500 hover:scale-[1.02]"
-                style={{ 
-                  objectFit: 'contain',
-                }}
-              />
-            </div>
+            <img
+              src="/hero-illustration.png"
+              alt="IntakeGenie AI Assistant"
+              className="w-full max-w-2xl lg:max-w-4xl h-auto transition-all duration-500 hover:scale-[1.02]"
+            />
           </div>
         </div>
       </section>
