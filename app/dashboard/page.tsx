@@ -109,19 +109,6 @@ export default async function DashboardPage() {
                     {firm.firm_name}
                   </div>
                 </div>
-                <div 
-                  className="bg-white rounded-xl shadow-sm p-6"
-                  style={{
-                    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-                  }}
-                >
-                  <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: '#4A5D73' }}>
-                    Routing Mode
-                  </div>
-                        <div className="text-2xl font-bold capitalize" style={{ color: '#0B1F3B' }}>
-                          {firm.mode.replace('_', ' ')}
-                        </div>
-                      </div>
                       </div>
 
               {/* IntakeGenie Number Card - Show if any number field exists */}
@@ -200,12 +187,6 @@ export default async function DashboardPage() {
                 <div className="grid gap-6 md:grid-cols-2 border-b border-gray-200 pb-6 mb-6">
                     <div>
                     <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A5D73' }}>
-                      Forward To Number
-                    </div>
-                    <div className="text-sm" style={{ color: '#0B1F3B' }}>{firm.forward_to_number}</div>
-                    </div>
-                    <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A5D73' }}>
                       Notification Emails
                     </div>
                     <div className="text-sm" style={{ color: '#0B1F3B' }}>{firm.notify_emails?.join(', ') || 'None'}</div>
@@ -216,28 +197,6 @@ export default async function DashboardPage() {
                     </div>
                     <div className="text-sm" style={{ color: '#0B1F3B' }}>{firm.timezone}</div>
                     </div>
-                    <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A5D73' }}>
-                      Business Hours
-                    </div>
-                    <div className="text-sm" style={{ color: '#0B1F3B' }}>{firm.open_time} - {firm.close_time}</div>
-                    </div>
-                    <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A5D73' }}>
-                      Open Days
-                    </div>
-                    <div className="text-sm" style={{ color: '#0B1F3B' }}>
-                        {firm.open_days
-                          .map((d: number) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d])
-                          .join(', ')}
-                    </div>
-                    </div>
-                    <div>
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#4A5D73' }}>
-                      Failover Ring Duration
-                    </div>
-                    <div className="text-sm" style={{ color: '#0B1F3B' }}>{firm.failover_ring_seconds} seconds</div>
-                  </div>
                 </div>
                 <Button 
                   asChild 

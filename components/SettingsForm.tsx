@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Firm, RoutingMode } from '@/types';
+import { Firm } from '@/types';
 import { createBrowserClient } from '@/lib/clients/supabase';
 
 interface SettingsFormProps {
@@ -34,33 +34,6 @@ const TIMEZONES = [
   { value: 'America/Sao_Paulo', label: 'BRT/BRST (São Paulo)' },
 ];
 
-const DAYS = [
-  { value: 0, label: 'Sun' },
-  { value: 1, label: 'Mon' },
-  { value: 2, label: 'Tue' },
-  { value: 3, label: 'Wed' },
-  { value: 4, label: 'Thu' },
-  { value: 5, label: 'Fri' },
-  { value: 6, label: 'Sat' },
-];
-
-const ROUTING_MODES = [
-  {
-    value: 'after_hours' as RoutingMode,
-    title: 'After Hours Only',
-    description: 'Route calls to AI agent only outside business hours',
-  },
-  {
-    value: 'failover' as RoutingMode,
-    title: 'No-Answer Failover Only',
-    description: 'Route to AI agent if firm doesn\'t answer during business hours',
-  },
-  {
-    value: 'both' as RoutingMode,
-    title: 'Both (After Hours + Failover)',
-    description: 'Use AI agent for after-hours calls and as failover during business hours',
-  },
-];
 
 export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
   const [loading, setLoading] = useState(false);
@@ -79,28 +52,16 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
 
   const [formData, setFormData] = useState({
     firm_name: firm?.firm_name || '',
-    forward_to_number: firm?.forward_to_number || '',
     notify_emails: firm?.notify_emails?.join(', ') || '',
     timezone: firm?.timezone || 'America/New_York',
-    mode: (firm?.mode || 'both') as RoutingMode,
-    open_days: firm?.open_days || [1, 2, 3, 4, 5],
-    open_time: firm?.open_time || '09:00',
-    close_time: firm?.close_time || '17:00',
-    failover_ring_seconds: firm?.failover_ring_seconds || 20,
   });
 
   useEffect(() => {
     if (firm) {
       setFormData({
         firm_name: firm.firm_name,
-        forward_to_number: firm.forward_to_number,
         notify_emails: firm.notify_emails?.join(', ') || '',
         timezone: firm.timezone,
-        mode: firm.mode,
-        open_days: firm.open_days,
-        open_time: firm.open_time,
-        close_time: firm.close_time,
-        failover_ring_seconds: firm.failover_ring_seconds,
       });
     }
   }, [firm]);
@@ -130,14 +91,8 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
 
       const firmData = {
         firm_name: formData.firm_name,
-        forward_to_number: formData.forward_to_number,
         notify_emails: notifyEmailsArray,
         timezone: formData.timezone,
-        mode: formData.mode,
-        open_days: formData.open_days,
-        open_time: formData.open_time,
-        close_time: formData.close_time,
-        failover_ring_seconds: formData.failover_ring_seconds,
       };
 
       let firmId: string;
@@ -186,14 +141,6 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
     }
   };
 
-  const toggleDay = (day: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      open_days: prev.open_days.includes(day)
-        ? prev.open_days.filter((d) => d !== day)
-        : [...prev.open_days, day],
-    }));
-  };
 
   return (
     <div className="w-full max-w-[900px] mx-auto">
@@ -650,42 +597,6 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
 
       <div>
               <label 
-                htmlFor="forward_to_number" 
-                className="block text-xs font-semibold uppercase tracking-wide mb-2"
-                style={{ color: '#4A5D73' }}
-              >
-                Forward To Number
-        </label>
-        <input
-          type="tel"
-          id="forward_to_number"
-          required
-          pattern="^\+[1-9]\d{1,14}$"
-                placeholder="+15551234567"
-                className="w-full h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
-                style={{
-                  borderColor: '#E5E7EB',
-                  backgroundColor: '#FFFFFF',
-                  fontSize: '14px',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#0B1F3B';
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(11, 31, 59, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#E5E7EB';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-          value={formData.forward_to_number}
-          onChange={(e) => setFormData({ ...formData, forward_to_number: e.target.value })}
-        />
-              <p className="mt-1.5 text-xs" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                E.164 format required (e.g., +15551234567)
-              </p>
-      </div>
-
-      <div>
-              <label 
                 htmlFor="notify_emails" 
                 className="block text-xs font-semibold uppercase tracking-wide mb-2"
                 style={{ color: '#4A5D73' }}
@@ -756,223 +667,6 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
           </div>
         </section>
 
-        {/* Call Routing Rules Section */}
-        <section className="py-8 border-b border-gray-200 last:border-b-0">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-1" style={{ color: '#4A5D73' }}>
-              Call Routing Rules
-            </h2>
-            <p className="text-sm" style={{ color: '#4A5D73', opacity: 0.7 }}>
-              Configure when calls should be routed to the AI agent
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {ROUTING_MODES.map((mode) => (
-              <label
-                key={mode.value}
-                className="block cursor-pointer"
-                onClick={() => setFormData({ ...formData, mode: mode.value })}
-              >
-                <div
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    formData.mode === mode.value
-                      ? 'border-[#0B1F3B]'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  style={{
-                    backgroundColor: formData.mode === mode.value ? 'rgba(11, 31, 59, 0.05)' : '#FFFFFF',
-                  }}
-                >
-                  <div className="flex items-start">
-            <input
-              type="radio"
-              name="mode"
-                      value={mode.value}
-                      checked={formData.mode === mode.value}
-                      onChange={() => setFormData({ ...formData, mode: mode.value })}
-                      className="mt-0.5 mr-3"
-                      style={{ accentColor: '#0B1F3B' }}
-                    />
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm mb-1" style={{ color: '#0B1F3B' }}>
-                        {mode.title}
-                      </div>
-                      <div className="text-sm" style={{ color: '#4A5D73', opacity: 0.8 }}>
-                        {mode.description}
-                      </div>
-                    </div>
-        </div>
-      </div>
-            </label>
-          ))}
-          </div>
-        </section>
-
-        {/* Business Hours Section */}
-        <section className="py-8 border-b border-gray-200 last:border-b-0">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-1" style={{ color: '#4A5D73' }}>
-              Business Hours
-            </h2>
-            <p className="text-sm" style={{ color: '#4A5D73', opacity: 0.7 }}>
-              Define when your firm is open for calls
-            </p>
-          </div>
-
-          <div className="space-y-5">
-            <div>
-              <label 
-                className="block text-xs font-semibold uppercase tracking-wide mb-3"
-                style={{ color: '#4A5D73' }}
-              >
-                Open Days
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {DAYS.map((day) => {
-                  const isSelected = formData.open_days.includes(day.value);
-                  return (
-                    <button
-                      key={day.value}
-                      type="button"
-                      onClick={() => toggleDay(day.value)}
-                      className="px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer"
-                      style={{
-                        backgroundColor: isSelected ? '#0B1F3B' : '#F3F4F6',
-                        color: isSelected ? '#FFFFFF' : '#4A5D73',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.backgroundColor = '#E5E7EB';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.backgroundColor = '#F3F4F6';
-                        }
-                      }}
-                    >
-                      {day.label}
-                    </button>
-                  );
-                })}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-                <label 
-                  htmlFor="open_time" 
-                  className="block text-xs font-semibold uppercase tracking-wide mb-2"
-                  style={{ color: '#4A5D73' }}
-                >
-            Open Time
-          </label>
-          <input
-            type="time"
-            id="open_time"
-            required
-                  className="w-full h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
-                  style={{
-                    borderColor: '#E5E7EB',
-                    backgroundColor: '#FFFFFF',
-                    fontSize: '14px',
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = '#0B1F3B';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(11, 31, 59, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = '#E5E7EB';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-            value={formData.open_time}
-            onChange={(e) => setFormData({ ...formData, open_time: e.target.value })}
-          />
-        </div>
-        <div>
-                <label 
-                  htmlFor="close_time" 
-                  className="block text-xs font-semibold uppercase tracking-wide mb-2"
-                  style={{ color: '#4A5D73' }}
-                >
-            Close Time
-          </label>
-          <input
-            type="time"
-            id="close_time"
-            required
-                  className="w-full h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
-                  style={{
-                    borderColor: '#E5E7EB',
-                    backgroundColor: '#FFFFFF',
-                    fontSize: '14px',
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = '#0B1F3B';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(11, 31, 59, 0.1)';
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = '#E5E7EB';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-            value={formData.close_time}
-            onChange={(e) => setFormData({ ...formData, close_time: e.target.value })}
-          />
-        </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Failover Behavior Section */}
-        <section className="py-8">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-1" style={{ color: '#4A5D73' }}>
-              Failover Behavior
-            </h2>
-            <p className="text-sm" style={{ color: '#4A5D73', opacity: 0.7 }}>
-              Configure how long to ring before routing to AI agent
-            </p>
-      </div>
-
-      <div>
-            <label 
-              htmlFor="failover_ring_seconds" 
-              className="block text-xs font-semibold uppercase tracking-wide mb-2"
-              style={{ color: '#4A5D73' }}
-            >
-              Failover Ring Duration
-        </label>
-        <input
-          type="number"
-          id="failover_ring_seconds"
-          required
-          min="5"
-          max="60"
-              className="w-full h-12 px-4 rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-offset-0"
-              style={{
-                borderColor: '#E5E7EB',
-                backgroundColor: '#FFFFFF',
-                fontSize: '14px',
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#0B1F3B';
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(11, 31, 59, 0.1)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = '#E5E7EB';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-          value={formData.failover_ring_seconds}
-          onChange={(e) =>
-            setFormData({ ...formData, failover_ring_seconds: parseInt(e.target.value) })
-          }
-        />
-            <p className="mt-1.5 text-xs" style={{ color: '#4A5D73', opacity: 0.7 }}>
-              Number of seconds to ring before routing to AI agent (5-60 seconds)
-            </p>
-      </div>
-        </section>
 
         {/* Save Button */}
         <div className="pt-6 border-t border-gray-200 sticky bottom-0 bg-white -mx-6 -mb-6 px-6 pb-6 rounded-b-lg">
