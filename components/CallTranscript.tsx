@@ -140,6 +140,25 @@ export default function CallTranscript({ call }: CallTranscriptProps) {
             </div>
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#4A5D73' }}>
+                Urgency
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium" style={{ color: '#0B1F3B' }}>
+                  {urgencyValue}/5
+                </span>
+                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden" style={{ maxWidth: '80px' }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(urgencyValue / 5) * 100}%`,
+                      backgroundColor: urgencyColor,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#4A5D73' }}>
                 Time
               </div>
               <div style={{ color: '#0B1F3B' }}>

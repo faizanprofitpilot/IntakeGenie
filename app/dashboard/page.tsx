@@ -4,6 +4,7 @@ import { PlatformLayout } from '@/components/platform-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import PhoneNumberDisplay from '@/components/PhoneNumberDisplay';
 
 // Force dynamic rendering since we use cookies for authentication
 export const dynamic = 'force-dynamic';
@@ -136,17 +137,29 @@ export default async function DashboardPage() {
                       Your IntakeGenie Number
                     </h2>
                   </div>
-                  <div className="text-2xl font-bold" style={{ color: '#0B1F3B' }}>
-                    {firm.inbound_number_e164 
-                      ? firm.inbound_number_e164.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
-                      : firm.vapi_phone_number && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/) 
-                        ? firm.vapi_phone_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
-                        : firm.twilio_number 
-                          ? firm.twilio_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
-                          : firm.vapi_phone_number_id
-                            ? 'Number being assigned...'
-                            : 'No number assigned'}
-                  </div>
+                  <PhoneNumberDisplay
+                    phoneNumber={
+                      firm.inbound_number_e164 
+                        ? firm.inbound_number_e164
+                        : firm.vapi_phone_number && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/)
+                          ? firm.vapi_phone_number
+                          : firm.twilio_number
+                            ? firm.twilio_number
+                            : null
+                    }
+                    formattedNumber={
+                      firm.inbound_number_e164 
+                        ? firm.inbound_number_e164.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
+                        : firm.vapi_phone_number && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/) 
+                          ? firm.vapi_phone_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
+                          : firm.twilio_number 
+                            ? firm.twilio_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
+                            : firm.vapi_phone_number_id
+                              ? 'Number being assigned...'
+                              : 'No number assigned'
+                    }
+                    isPending={!!firm.vapi_phone_number_id && !firm.inbound_number_e164}
+                  />
                   {firm.vapi_phone_number_id && !firm.inbound_number_e164 && (
                     <p className="text-sm mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
                       The number is being assigned. It will appear here automatically once ready.
