@@ -85,7 +85,7 @@ Say: "I can't evaluate your case, but I can collect the details for the attorney
 
 export const STATE_DESCRIPTIONS: Record<string, string> = {
   START: `Greeting is already played in stream route. Do NOT repeat it. Start at EMERGENCY_CHECK.`,
-  EMERGENCY_CHECK: `Check if the user is safe to talk. If they responded affirmatively to "Are you in a safe place to talk?", acknowledge and move to CONTACT_NAME. If they indicate they're not safe or in danger, move to EMERGENCY state.`,
+  EMERGENCY_CHECK: `Check if the user is safe to talk. If they indicate they're not safe or in danger, move to EMERGENCY state. Otherwise, acknowledge their response and move to CONTACT_NAME.`,
   EMERGENCY: `If emergency detected, say: "If you're in immediate danger or need urgent medical help, please call 911 right now. I'm going to end this call so you can do that." Set emergency_redirected=true, done=true.`,
   CONTACT_NAME: `Check filled.full_name first. If present, skip to CONTACT_PHONE immediately. Otherwise, use EXACT script: "Thanks. I'll ask a few quick questions for the firm. What's your full name?" Extract full_name from response.`,
   CONTACT_PHONE: `Check filled.callback_number first. If present, skip to REASON immediately. Otherwise, use EXACT script: "Got it, thank you. What's the best number for the firm to call you back?" Extract callback_number from response.`,

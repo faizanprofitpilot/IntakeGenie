@@ -4,7 +4,7 @@
 export function buildVapiAgent(firmName: string, customGreeting?: string | null, aiTone?: string, aiKnowledgeBase?: string | null) {
   const greeting = customGreeting 
     ? customGreeting.replace(/{FIRM_NAME}/g, firmName)
-    : `Thank you for calling ${firmName}. I'm an automated assistant for the firm. I can't give legal advice, but I can collect details so the firm can follow up. Are you in a safe place to talk right now?`;
+    : `Thank you for calling ${firmName}. I'm an automated assistant for the firm. I can't give legal advice, but I can collect details so the firm can follow up. How can I help you today?`;
 
   // Map tone to communication style instructions
   const toneInstructions: Record<string, string> = {

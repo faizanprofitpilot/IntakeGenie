@@ -9,7 +9,7 @@ interface AIReceptionistSettingsProps {
   onSave?: () => void;
 }
 
-const DEFAULT_GREETING = "Thank you for calling {FIRM_NAME}. I'm an automated assistant for the firm. I can't give legal advice. But I can collect your information so the firm can follow up. Are you in a safe place to talk right now?";
+const DEFAULT_GREETING = "Thank you for calling {FIRM_NAME}. I'm an automated assistant for the firm. I can't give legal advice. But I can collect your information so the firm can follow up. How can I help you today?";
 
 const TONE_OPTIONS: Array<{ value: AITone; label: string; description: string }> = [
   {
