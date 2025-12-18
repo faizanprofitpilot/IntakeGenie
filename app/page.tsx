@@ -1,11 +1,35 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState, useMemo } from 'react';
+import { createBrowserClient } from '@/lib/clients/supabase';
 
 function LandingPageContent() {
   const [isVisible, setIsVisible] = useState<Record<string, boolean>>({});
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const sectionsRef = useRef<Record<string, HTMLElement | null>>({});
+  const supabase = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    return createBrowserClient();
+  }, []);
+
+  useEffect(() => {
+    // Check authentication status
+    const checkAuth = async () => {
+      if (!supabase) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    checkAuth();
+
+    // Listen for auth changes
+    if (supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setIsAuthenticated(!!session);
+      });
+      return () => subscription.unsubscribe();
+    }
+  }, [supabase]);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
@@ -77,20 +101,32 @@ function LandingPageContent() {
                   Pricing
                 </a>
               </nav>
-              <Link
-                href="/login"
-                className="px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
-                style={{ color: '#4A5D73' }}
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/login"
-                className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 shadow-sm text-white hover:[background-color:#0A1A33] hover:scale-105 hover:shadow-lg cursor-pointer"
-                style={{ backgroundColor: '#0B1F3B' }}
-              >
-                Get Started
-              </Link>
+              {isAuthenticated ? (
+                <Link
+                  href="/dashboard"
+                  className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 shadow-sm text-white hover:[background-color:#0A1A33] hover:scale-105 hover:shadow-lg cursor-pointer"
+                  style={{ backgroundColor: '#0B1F3B' }}
+                >
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
+                    style={{ color: '#4A5D73' }}
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 shadow-sm text-white hover:[background-color:#0A1A33] hover:scale-105 hover:shadow-lg cursor-pointer"
+                    style={{ backgroundColor: '#0B1F3B' }}
+                  >
+                    Get Started
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -145,13 +181,23 @@ function LandingPageContent() {
               isVisible['hero'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}
           >
-            <Link
-              href="/login"
-              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-1 text-white hover:[background-color:#0A1A33] cursor-pointer"
-              style={{ backgroundColor: '#0B1F3B' }}
-            >
-              Start Free Trial - No Credit Card
-            </Link>
+            {isAuthenticated ? (
+              <Link
+                href="/dashboard"
+                className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-1 text-white hover:[background-color:#0A1A33] cursor-pointer"
+                style={{ backgroundColor: '#0B1F3B' }}
+              >
+                Go to Dashboard
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform hover:-translate-y-1 text-white hover:[background-color:#0A1A33] cursor-pointer"
+                style={{ backgroundColor: '#0B1F3B' }}
+              >
+                Start Free Trial - No Credit Card
+              </Link>
+            )}
             <Link
               href="#features"
               className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg border-2 bg-white hover:[background-color:#F5F7FA] hover:scale-105 transform hover:-translate-y-1 cursor-pointer"
@@ -365,13 +411,23 @@ function LandingPageContent() {
               isVisible['how-it-works'] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
             }`}
           >
-            <Link
-              href="/login"
-              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block text-white hover:[background-color:#0A1A33] hover:scale-105 hover:shadow-xl cursor-pointer"
-              style={{ backgroundColor: '#0B1F3B' }}
-            >
-              Get Started Now
-            </Link>
+            {isAuthenticated ? (
+              <Link
+                href="/dashboard"
+                className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block text-white hover:[background-color:#0A1A33] hover:scale-105 hover:shadow-xl cursor-pointer"
+                style={{ backgroundColor: '#0B1F3B' }}
+              >
+                Go to Dashboard
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block text-white hover:[background-color:#0A1A33] hover:scale-105 hover:shadow-xl cursor-pointer"
+                style={{ backgroundColor: '#0B1F3B' }}
+              >
+                Get Started Now
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -488,7 +544,7 @@ function LandingPageContent() {
                     ))}
                   </ul>
                   <Link
-                    href="/login"
+                    href={isAuthenticated ? "/dashboard" : "/login"}
                     className={`block w-full px-6 py-3 rounded-lg text-center font-semibold transition-all duration-300 hover:scale-105 cursor-pointer ${
                       plan.featured 
                         ? 'text-white hover:[background-color:#0A1A33]' 
@@ -496,7 +552,7 @@ function LandingPageContent() {
                     }`}
                     style={plan.featured ? { backgroundColor: '#0B1F3B' } : { color: '#0B1F3B', borderColor: '#0B1F3B' }}
                   >
-                    {plan.cta}
+                    {isAuthenticated ? "Go to Dashboard" : plan.cta}
                   </Link>
             </div>
               </div>
@@ -525,13 +581,23 @@ function LandingPageContent() {
           <p className="text-base mb-8" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>
             No credit card required • Free trial • Cancel anytime
           </p>
-          <Link
-            href="/login"
-            className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block bg-white hover:bg-gray-100 hover:scale-105 hover:shadow-xl cursor-pointer"
-            style={{ color: '#0B1F3B' }}
-          >
-            Start Your Free Trial
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              href="/dashboard"
+              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block bg-white hover:bg-gray-100 hover:scale-105 hover:shadow-xl cursor-pointer"
+              style={{ color: '#0B1F3B' }}
+            >
+              Go to Dashboard
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 shadow-lg inline-block bg-white hover:bg-gray-100 hover:scale-105 hover:shadow-xl cursor-pointer"
+              style={{ color: '#0B1F3B' }}
+            >
+              Start Your Free Trial
+            </Link>
+          )}
         </div>
       </section>
 
@@ -546,20 +612,32 @@ function LandingPageContent() {
             />
             <p className="mb-4" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Never miss a legal lead again.</p>
             <div className="flex justify-center space-x-6">
-              <Link 
-                href="/login" 
-                className="transition-all duration-300 hover:text-white hover:scale-110" 
-                style={{ color: 'rgba(255, 255, 255, 0.7)' }}
-              >
-                Sign In
-              </Link>
-              <Link 
-                href="/login" 
-                className="transition-all duration-300 hover:text-white hover:scale-110" 
-                style={{ color: 'rgba(255, 255, 255, 0.7)' }}
-              >
-                Get Started
-              </Link>
+              {isAuthenticated ? (
+                <Link 
+                  href="/dashboard" 
+                  className="transition-all duration-300 hover:text-white hover:scale-110" 
+                  style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                >
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link 
+                    href="/login" 
+                    className="transition-all duration-300 hover:text-white hover:scale-110" 
+                    style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                  >
+                    Sign In
+                  </Link>
+                  <Link 
+                    href="/login" 
+                    className="transition-all duration-300 hover:text-white hover:scale-110" 
+                    style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                  >
+                    Get Started
+                  </Link>
+                </>
+              )}
             </div>
             <p className="mt-8 text-sm" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>© 2024 IntakeGenie. All rights reserved.</p>
           </div>
