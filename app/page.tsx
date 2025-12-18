@@ -67,7 +67,7 @@ function LandingPageContent() {
         style={{ borderColor: '#4A5D73' }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-16 relative">
             <div className="flex items-center">
               <Link href="/" className="transition-transform duration-300 hover:scale-105">
                 <img 
@@ -77,30 +77,30 @@ function LandingPageContent() {
                 />
               </Link>
             </div>
+            <nav className="hidden md:flex items-center space-x-6 absolute left-1/2 transform -translate-x-1/2">
+              <a
+                href="#features"
+                className="text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
+                style={{ color: '#4A5D73' }}
+              >
+                Features
+              </a>
+              <a
+                href="#how-it-works"
+                className="text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
+                style={{ color: '#4A5D73' }}
+              >
+                How It Works
+              </a>
+              <a
+                href="#pricing"
+                className="text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
+                style={{ color: '#4A5D73' }}
+              >
+                Pricing
+              </a>
+            </nav>
             <div className="flex items-center space-x-6">
-              <nav className="hidden md:flex items-center space-x-6">
-                <a
-                  href="#features"
-                  className="text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
-                  style={{ color: '#4A5D73' }}
-                >
-                  Features
-                </a>
-                <a
-                  href="#how-it-works"
-                  className="text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
-                  style={{ color: '#4A5D73' }}
-                >
-                  How It Works
-                </a>
-                <a
-                  href="#pricing"
-                  className="text-sm font-medium transition-all duration-300 hover:[color:#0B1F3B] hover:scale-105 cursor-pointer"
-                  style={{ color: '#4A5D73' }}
-                >
-                  Pricing
-                </a>
-              </nav>
               {isAuthenticated ? (
                 <Link
                   href="/dashboard"
