@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Firm } from '@/types';
 import { createBrowserClient } from '@/lib/clients/supabase';
+import PhoneNumberDisplay from './PhoneNumberDisplay';
 
 interface SettingsFormProps {
   firm: Firm | null;
@@ -41,8 +42,6 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
   const [success, setSuccess] = useState(false);
   const [supabase, setSupabase] = useState<ReturnType<typeof createBrowserClient> | null>(null);
   const [manualTwilioNumber, setManualTwilioNumber] = useState('');
-  const [areaCode, setAreaCode] = useState('');
-  const [provisioning, setProvisioning] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -166,196 +165,61 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-0">
-        {/* Phone Number Section - Show First */}
-        {firm && (
+        {/* Phone Number Display Section - Only show if number exists */}
+        {firm && (firm.inbound_number_e164 || firm.vapi_phone_number || firm.twilio_number) && (
           <section className="pb-8 border-b border-gray-200">
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-1" style={{ color: '#4A5D73' }}>
                 Phone Number
               </h2>
               <p className="text-sm" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                Provision a phone number for your firm. Calls are handled by IntakeGenie's AI assistant.
+                Your provisioned phone number for receiving calls.
               </p>
             </div>
 
             <div className="space-y-5">
-              {/* Display current number if exists */}
-              {(firm.inbound_number_e164 || firm.vapi_phone_number || firm.twilio_number) && (
-                <div className="p-4 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: '#0B1F3B' }}>
-                        {firm.inbound_number_e164 || firm.vapi_phone_number || firm.twilio_number}
-                      </p>
-                      {firm.telephony_provider && (
-                        <p className="text-xs mt-1" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                          Provider: {firm.telephony_provider === 'twilio_imported_into_vapi' ? 'Twilio + Vapi' : firm.telephony_provider}
-                        </p>
-                      )}
-                    </div>
-                    {firm.inbound_number_e164 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(firm.inbound_number_e164!);
-                          setSuccess(true);
-                          setTimeout(() => setSuccess(false), 2000);
-                        }}
-                        className="px-4 py-2 text-xs rounded-lg font-medium transition-all"
-                        style={{ backgroundColor: '#0B1F3B', color: '#FFFFFF' }}
-                      >
-                        Copy
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Provision new number - only show if no number exists */}
-              {!firm.inbound_number_e164 && !firm.vapi_phone_number_id && !firm.twilio_phone_number_sid && (
-                <div className="space-y-4">
-                  <div>
-                    <label 
-                      htmlFor="area_code" 
-                      className="block text-xs font-semibold uppercase tracking-wide mb-2"
-                      style={{ color: '#4A5D73' }}
-                    >
-                      Area Code (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      id="area_code"
-                      value={areaCode}
-                      onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                      placeholder="e.g., 415"
-                      className="w-full h-12 px-4 rounded-lg border text-sm"
-                      style={{
-                        borderColor: '#E5E7EB',
-                        backgroundColor: '#FFFFFF',
-                        color: '#0B1F3B',
-                      }}
-                      disabled={provisioning}
-                    />
-                    <p className="text-xs mt-1.5" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                      Leave blank for any available number
-                    </p>
-                  </div>
-                  
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!supabase || !firm) return;
-                      
-                      setProvisioning(true);
-                      setLoading(true);
-                      setError(null);
-                      setSuccess(false);
-                      
-                      try {
-                        const response = await fetch('/api/telephony/provision', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({ 
-                            firmId: firm.id,
-                            areaCode: areaCode || undefined,
-                          }),
-                        });
-
-                        const data = await response.json();
-                        
-                        if (!response.ok) {
-                          let errorMsg = 'Failed to provision number';
-                          if (data.message) {
-                            errorMsg = Array.isArray(data.message) ? data.message.join(', ') : data.message;
-                          } else if (data.error) {
-                            errorMsg = data.error;
-                          } else if (data.details) {
-                            errorMsg = typeof data.details === 'string' ? data.details : JSON.stringify(data.details);
-                          }
-                          
-                          // If number already exists, show a clear message
-                          if (response.status === 409 || errorMsg.includes('already provisioned')) {
-                            errorMsg = 'A phone number has already been provisioned for this firm. Only one number is allowed per firm.';
-                            // Refresh the form to show the existing number
-                            setTimeout(() => {
-                              onSave();
-                            }, 1000);
-                          }
-                          
-                          throw new Error(errorMsg);
-                        }
-
-                        setSuccess(true);
-                        setAreaCode('');
-                        setTimeout(() => {
-                          setSuccess(false);
-                          onSave();
-                        }, 2000);
-                      } catch (err: any) {
-                        console.error('Error provisioning number:', err);
-                        setError(err.message || 'Failed to provision number. Check browser console for details.');
-                      } finally {
-                        setLoading(false);
-                        setProvisioning(false);
-                      }
-                    }}
-                    disabled={loading || provisioning}
-                    className="h-12 px-6 rounded-lg font-semibold text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{
-                      backgroundColor: (loading || provisioning) ? '#4A5D73' : '#0B1F3B',
-                      color: '#FFFFFF',
-                    }}
-                  >
-                    {loading || provisioning ? 'Provisioning...' : 'Provision Phone Number'}
-                  </button>
-                </div>
-              )}
-
-              {/* Refresh button for existing numbers */}
+              {/* Display current number - matches dashboard display */}
+              <PhoneNumberDisplay
+                phoneNumber={
+                  firm.inbound_number_e164 
+                    ? firm.inbound_number_e164
+                    : firm.vapi_phone_number && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/)
+                      ? firm.vapi_phone_number
+                      : firm.twilio_number
+                        ? firm.twilio_number
+                        : null
+                }
+                formattedNumber={
+                  firm.inbound_number_e164 
+                    ? firm.inbound_number_e164.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
+                    : firm.vapi_phone_number && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/) 
+                      ? firm.vapi_phone_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
+                      : firm.twilio_number 
+                        ? firm.twilio_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
+                        : firm.vapi_phone_number_id
+                          ? 'Number being assigned...'
+                          : 'No number assigned'
+                }
+                isPending={!!firm.vapi_phone_number_id && !firm.inbound_number_e164}
+              />
               {firm.vapi_phone_number_id && !firm.inbound_number_e164 && (
-                <div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!supabase || !firm) return;
-                      
-                      setLoading(true);
-                      setError(null);
-                      
-                      try {
-                        const response = await fetch(`/api/telephony/refresh-number?firmId=${firm.id}`);
-
-                        const data = await response.json();
-                        
-                        if (!response.ok) {
-                          throw new Error(data.error || 'Failed to refresh number');
-                        }
-
-                        if (data.phoneNumber) {
-                          setSuccess(true);
-                          setTimeout(() => {
-                            setSuccess(false);
-                            onSave();
-                          }, 2000);
-                        } else {
-                          setError('Number not yet assigned');
-                        }
-                      } catch (err: any) {
-                        console.error('Error refreshing number:', err);
-                        setError(err.message || 'Failed to refresh number');
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                    disabled={loading}
-                    className="h-10 px-4 rounded-lg font-semibold text-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: '#4A5D73', color: '#FFFFFF' }}
+                <p className="text-sm" style={{ color: '#4A5D73', opacity: 0.7 }}>
+                  The number is being assigned. It will appear here automatically once ready.
+                  {' '}
+                  <a 
+                    href={`https://dashboard.vapi.ai/phone-numbers/${firm.vapi_phone_number_id}`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
                   >
-                    {loading ? 'Refreshing...' : 'Refresh Number from Vapi'}
-                  </button>
-                </div>
+                    View in Vapi Dashboard
+                  </a>
+                </p>
+              )}
+              {firm.inbound_number_e164 && firm.telephony_provider && (
+                <p className="text-xs" style={{ color: '#4A5D73', opacity: 0.7 }}>
+                  Provider: {firm.telephony_provider === 'twilio_imported_into_vapi' ? 'Twilio + Vapi' : firm.telephony_provider}
+                </p>
               )}
 
 
@@ -366,7 +230,7 @@ export default function SettingsForm({ firm, onSave }: SettingsFormProps) {
                     Link Existing Vapi Phone Number (Advanced)
                   </summary>
                   <p className="text-xs mb-2 mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                    Only use this if you've already imported a phone number into Vapi manually (via the Vapi dashboard) and want to link it to this firm. For new numbers, use the "Provision Phone Number" button above.
+                    Only use this if you've already imported a phone number into Vapi manually (via the Vapi dashboard) and want to link it to this firm. For new numbers, use the "Provision Phone Number" button in the Dashboard.
                   </p>
                 <div className="flex gap-2">
                   <input

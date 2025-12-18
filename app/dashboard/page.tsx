@@ -4,7 +4,7 @@ import { PlatformLayout } from '@/components/platform-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import PhoneNumberDisplay from '@/components/PhoneNumberDisplay';
+import PhoneNumberProvision from '@/components/PhoneNumberProvision';
 
 // Force dynamic rendering since we use cookies for authentication
 export const dynamic = 'force-dynamic';
@@ -165,63 +165,14 @@ export default async function DashboardPage() {
                 </div>
                       </div>
 
-              {/* IntakeGenie Number Card - Show if any number field exists */}
-              {(firm.inbound_number_e164 || firm.vapi_phone_number_id || firm.vapi_phone_number || firm.twilio_number) && (
-                <div 
-                  className="bg-white rounded-xl shadow-sm p-8"
-                  style={{
-                    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-                  }}
-                >
-                  <div className="mb-2">
-                    <h2 className="text-lg font-semibold mb-1" style={{ color: '#4A5D73' }}>
-                      Your IntakeGenie Number
-                    </h2>
-                  </div>
-                  <PhoneNumberDisplay
-                    phoneNumber={
-                      firm.inbound_number_e164 
-                        ? firm.inbound_number_e164
-                        : firm.vapi_phone_number && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/)
-                          ? firm.vapi_phone_number
-                          : firm.twilio_number
-                            ? firm.twilio_number
-                            : null
-                    }
-                    formattedNumber={
-                      firm.inbound_number_e164 
-                        ? firm.inbound_number_e164.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
-                        : firm.vapi_phone_number && firm.vapi_phone_number.match(/^\+?[1-9]\d{1,14}$/) 
-                          ? firm.vapi_phone_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
-                          : firm.twilio_number 
-                            ? firm.twilio_number.replace(/^\+?(\d{1})(\d{3})(\d{3})(\d{4})$/, '+$1 ($2) $3-$4')
-                            : firm.vapi_phone_number_id
-                              ? 'Number being assigned...'
-                              : 'No number assigned'
-                    }
-                    isPending={!!firm.vapi_phone_number_id && !firm.inbound_number_e164}
-                  />
-                  {firm.vapi_phone_number_id && !firm.inbound_number_e164 && (
-                    <p className="text-sm mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                      The number is being assigned. It will appear here automatically once ready.
-                      {' '}
-                      <a 
-                        href={`https://dashboard.vapi.ai/phone-numbers/${firm.vapi_phone_number_id}`}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        View in Vapi Dashboard
-                      </a>
-                    </p>
-                  )}
-                  {firm.inbound_number_e164 && firm.telephony_provider && (
-                    <p className="text-xs mt-2" style={{ color: '#4A5D73', opacity: 0.7 }}>
-                      Provider: {firm.telephony_provider === 'twilio_imported_into_vapi' ? 'Twilio + Vapi' : firm.telephony_provider}
-                    </p>
-                  )}
-                </div>
-              )}
+              {/* Phone Number Provision/Display */}
+              <PhoneNumberProvision 
+                firm={firm} 
+                onProvisioned={() => {
+                  // Force page refresh to show updated number
+                  window.location.reload();
+                }}
+              />
 
               {/* Firm Settings Summary */}
               <div 
