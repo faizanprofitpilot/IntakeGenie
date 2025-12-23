@@ -116,22 +116,6 @@ export default function PhoneNumberProvision({ firm, onProvisioned }: PhoneNumbe
                   }
 
                   setFixWebhookSuccess(true);
-                  
-                  // Verify the webhook was actually set
-                  try {
-                    const verifyResponse = await fetch(`/api/vapi/verify-assistant?firmId=${firm.id}`);
-                    const verifyData = await verifyResponse.json();
-                    
-                    if (verifyData.success && verifyData.assistant.hasCorrectWebhook) {
-                      setFixWebhookSuccess(true);
-                    } else {
-                      setFixWebhookError('Webhook URL was updated but verification failed. Please check Vapi dashboard.');
-                    }
-                  } catch (verifyErr) {
-                    console.error('Verification error:', verifyErr);
-                    // Don't show error - the update might have worked
-                  }
-                  
                   setTimeout(() => setFixWebhookSuccess(false), 5000);
                 } catch (err: any) {
                   setFixWebhookError(err.message || 'Failed to fix webhook');
