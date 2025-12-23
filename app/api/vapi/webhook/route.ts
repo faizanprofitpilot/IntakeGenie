@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
       // IMPORTANT: caller number is in call.customer.number, NOT phoneNumber.number
       // phoneNumber.number is the Vapi number being called, not the caller
       phoneNumber = message.call?.customer?.number || message.customer?.number;
-      phoneNumberId = message.phoneNumber?.id;
-      metadata = message.assistant?.metadata || message.metadata;
+      phoneNumberId = message.phoneNumber?.id || message.call?.phoneNumberId || message.phoneNumberId;
+      metadata = message.assistant?.metadata || message.metadata || message.call?.metadata;
       
       // Extract transcript from various locations
       if (message.artifact?.transcript) {
@@ -215,19 +215,43 @@ export async function POST(req: NextRequest) {
 
     // If we still don't have firmId, try one more lookup by assistant ID
     if (!firmId) {
-      const assistantId = metadata?.assistantId || body.assistantId || body.assistant?.id;
+      // Try multiple locations for assistant ID
+      const assistantId = 
+        metadata?.assistantId || 
+        body.assistantId || 
+        body.assistant?.id ||
+        body.message?.assistant?.id ||
+        body.message?.call?.assistantId ||
+        body.call?.assistantId;
+        
+      console.log('[Vapi Webhook] Attempting assistant ID lookup. Extracted assistantId:', assistantId);
+      console.log('[Vapi Webhook] Assistant ID locations checked:', {
+        metadata_assistantId: metadata?.assistantId,
+        body_assistantId: body.assistantId,
+        body_assistant_id: body.assistant?.id,
+        message_assistant_id: body.message?.assistant?.id,
+        message_call_assistantId: body.message?.call?.assistantId,
+        call_assistantId: body.call?.assistantId,
+      });
+      
       if (assistantId) {
         console.log('[Vapi Webhook] Trying firm lookup by assistantId:', assistantId);
-        const { data: firmData } = await supabase
+        const { data: firmData, error: assistantLookupError } = await supabase
           .from('firms')
-          .select('id')
+          .select('id, vapi_assistant_id')
           .eq('vapi_assistant_id', assistantId)
           .maybeSingle();
         
+        console.log('[Vapi Webhook] Assistant lookup result:', firmData, 'Error:', assistantLookupError);
+        
         if (firmData && (firmData as any).id) {
           firmId = (firmData as any).id;
-          console.log('[Vapi Webhook] Found firm by assistantId:', firmId);
+          console.log('[Vapi Webhook] ✅ Found firm by assistantId:', firmId);
+        } else {
+          console.warn('[Vapi Webhook] No firm found with assistantId:', assistantId);
         }
+      } else {
+        console.warn('[Vapi Webhook] No assistant ID found in webhook payload');
       }
     }
 
@@ -262,7 +286,19 @@ export async function POST(req: NextRequest) {
       console.log('[Vapi Webhook] Processing call update event');
       console.log('[Vapi Webhook] Event:', event);
       console.log('[Vapi Webhook] Status:', body.message?.status);
+      console.log('[Vapi Webhook] FirmId:', firmId);
+      console.log('[Vapi Webhook] Conversation ID:', conversation_id);
       console.log('[Vapi Webhook] Structured data:', JSON.stringify(structuredData, null, 2));
+      
+      if (!firmId) {
+        console.error('[Vapi Webhook] Cannot create call - firmId is missing');
+        console.error('[Vapi Webhook] Phone Number ID:', actualPhoneNumberId);
+        console.error('[Vapi Webhook] Assistant ID:', metadata?.assistantId || body.assistantId || body.assistant?.id);
+        console.error('[Vapi Webhook] Metadata:', JSON.stringify(metadata, null, 2));
+        // Still return 200 to prevent retries
+        return NextResponse.json({ ok: true, warning: 'Cannot create call - firmId missing' });
+      }
+      
       try {
         const result = await upsertCall({
           conversationId: conversation_id,
@@ -271,16 +307,18 @@ export async function POST(req: NextRequest) {
           phoneNumber: actualPhoneNumber, // Pass caller's number
         });
         if (result.success) {
-          console.log('[Vapi Webhook] Call upserted successfully');
+          console.log('[Vapi Webhook] ✅ Call upserted successfully');
           console.log('[Vapi Webhook] Call ID:', result.callId);
         } else {
-          console.error('[Vapi Webhook] Failed to upsert call:', result.error);
+          console.error('[Vapi Webhook] ❌ Failed to upsert call:', result.error);
           console.error('[Vapi Webhook] Error details:', JSON.stringify(result.error, null, 2));
         }
       } catch (upsertError: any) {
-        console.error('[Vapi Webhook] Exception during upsert:', upsertError);
+        console.error('[Vapi Webhook] ❌ Exception during upsert:', upsertError);
         console.error('[Vapi Webhook] Upsert error stack:', upsertError?.stack);
         console.error('[Vapi Webhook] Upsert error details:', JSON.stringify(upsertError, null, 2));
+        console.error('[Vapi Webhook] Upsert error message:', upsertError?.message);
+        // Don't return error - let it continue to finalizeCall
       }
     }
 
