@@ -7,7 +7,6 @@ SELECT
   vapi_assistant_id,
   vapi_phone_number_id,
   inbound_number_e164,
-  vapi_phone_number,
   telephony_provider
 FROM firms
 -- WHERE id = 'YOUR_FIRM_ID'  -- Uncomment and add your firm ID

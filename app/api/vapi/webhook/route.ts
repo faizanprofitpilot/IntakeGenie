@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
         // Look up by phone number ID (stored in vapi_phone_number_id field)
         const { data: firmData, error: lookupError } = await supabase
           .from('firms')
-          .select('id, inbound_number_e164, vapi_phone_number_id, vapi_assistant_id, vapi_phone_number')
+          .select('id, inbound_number_e164, vapi_phone_number_id, vapi_assistant_id')
           .eq('vapi_phone_number_id', actualPhoneNumberId)
           .limit(1)
           .maybeSingle();
@@ -183,7 +183,7 @@ export async function POST(req: NextRequest) {
         const { data: firmData, error: phoneLookupError } = await supabase
           .from('firms')
           .select('id')
-          .or(`inbound_number_e164.eq.${actualPhoneNumber},vapi_phone_number.eq.${actualPhoneNumber}`)
+          .eq('inbound_number_e164', actualPhoneNumber)
           .maybeSingle();
         
         console.log('[Vapi Webhook] Firm lookup by phoneNumber:', actualPhoneNumber, 'Result:', firmData, 'Error:', phoneLookupError);
@@ -196,7 +196,7 @@ export async function POST(req: NextRequest) {
       // If we have firmId and actual phone number, check if we need to update the stored number
       const { data: firmData } = await supabase
         .from('firms')
-        .select('inbound_number_e164, vapi_phone_number')
+        .select('inbound_number_e164')
         .eq('id', firmId)
         .single();
       

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     // Get user's firm
     const { data: firmData, error: firmError } = await supabase
       .from('firms')
-      .select('id, vapi_assistant_id, vapi_phone_number_id, inbound_number_e164, vapi_phone_number')
+      .select('id, vapi_assistant_id, vapi_phone_number_id, inbound_number_e164')
       .eq('owner_user_id', session.user.id)
       .limit(1)
       .single();
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
         const endedAt = callDetail.endedAt || null;
 
         // Get firm's phone number for to_number
-        const toNumber = firm.inbound_number_e164 || firm.vapi_phone_number || '';
+        const toNumber = firm.inbound_number_e164 || '';
 
         // Create call record using finalizeCall (which handles all the processing)
         await finalizeCall({
