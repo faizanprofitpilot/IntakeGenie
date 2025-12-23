@@ -291,10 +291,17 @@ export async function POST(req: NextRequest) {
       console.log('[Vapi Webhook] Structured data:', JSON.stringify(structuredData, null, 2));
       
       if (!firmId) {
-        console.error('[Vapi Webhook] Cannot create call - firmId is missing');
+        console.error('[Vapi Webhook] ❌ CRITICAL: Cannot create call - firmId is missing');
         console.error('[Vapi Webhook] Phone Number ID:', actualPhoneNumberId);
-        console.error('[Vapi Webhook] Assistant ID:', metadata?.assistantId || body.assistantId || body.assistant?.id);
+        console.error('[Vapi Webhook] Assistant ID:', metadata?.assistantId || body.assistantId || body.assistant?.id || body.message?.assistant?.id || body.message?.call?.assistantId || body.call?.assistantId);
         console.error('[Vapi Webhook] Metadata:', JSON.stringify(metadata, null, 2));
+        console.error('[Vapi Webhook] Full body structure:', {
+          hasMessage: !!body.message,
+          messageType: body.message?.type,
+          hasCall: !!body.call,
+          hasAssistant: !!body.assistant,
+          hasPhoneNumber: !!body.phoneNumber,
+        });
         // Still return 200 to prevent retries
         return NextResponse.json({ ok: true, warning: 'Cannot create call - firmId missing' });
       }
