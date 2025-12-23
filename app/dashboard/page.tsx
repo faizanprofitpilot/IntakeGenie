@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import PhoneNumberGenerate from '@/components/PhoneNumberProvision';
+import UsageDisplay from '@/components/UsageDisplay';
 
 // Force dynamic rendering since we use cookies for authentication
 export const dynamic = 'force-dynamic';
@@ -185,6 +186,16 @@ export default async function DashboardPage() {
                   </div>
                 </div>
                       </div>
+
+              {/* Usage Display */}
+              {(firm as any).subscription_plan && (
+                <UsageDisplay
+                  firmId={(firm as any).id}
+                  subscriptionPlan={(firm as any).subscription_plan}
+                  subscriptionStatus={(firm as any).subscription_status}
+                  subscriptionCurrentPeriodEnd={(firm as any).subscription_current_period_end}
+                />
+              )}
 
               {/* Phone Number Generate/Display */}
               <PhoneNumberGenerate 

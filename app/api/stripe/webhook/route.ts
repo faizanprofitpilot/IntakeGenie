@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
 
           if (firm) {
             const updateData: any = {
-              // @ts-ignore - New fields not in types yet
+              // @ts-ignore - New fields not in generated types yet
               stripe_subscription_id: subscription.id,
               // @ts-ignore
               stripe_price_id: subscription.items.data[0]?.price.id,
@@ -119,6 +119,24 @@ export async function POST(req: NextRequest) {
               // @ts-ignore
               subscription_cancel_at_period_end: (subscription as any).cancel_at_period_end || false,
             };
+
+            // Update plan from metadata if available
+            if (plan) {
+              updateData.subscription_plan = plan;
+            } else {
+              // Try to infer plan from price ID
+              const priceId = subscription.items.data[0]?.price.id;
+              if (priceId) {
+                const { STRIPE_PRICE_IDS } = await import('@/lib/clients/stripe');
+                if (priceId === STRIPE_PRICE_IDS.starter) {
+                  updateData.subscription_plan = 'starter';
+                } else if (priceId === STRIPE_PRICE_IDS.professional) {
+                  updateData.subscription_plan = 'professional';
+                } else if (priceId === STRIPE_PRICE_IDS.turbo) {
+                  updateData.subscription_plan = 'turbo';
+                }
+              }
+            }
 
             if (plan) {
               updateData.subscription_plan = plan;

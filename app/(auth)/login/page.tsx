@@ -1,22 +1,32 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createBrowserClient } from '@/lib/clients/supabase';
 import Link from 'next/link';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [trialPlan, setTrialPlan] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => {
     if (typeof window === 'undefined') return null;
     return createBrowserClient();
   }, []);
+
+  useEffect(() => {
+    const trial = searchParams.get('trial');
+    if (trial) {
+      setTrialPlan(trial);
+      setIsSignUp(true); // Auto-set to sign up mode for trial
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,6 +148,31 @@ export default function LoginPage() {
         }
 
         console.log('Session verified:', verifiedSession.user.email);
+      }
+
+      // Verify session exists (for both sign up and sign in)
+      const { data: { session: finalSession } } = await supabase.auth.getSession();
+      if (!finalSession) {
+        throw new Error('Session not established. Please try again.');
+      }
+
+      // If user came from trial flow, redirect to checkout
+      if (trialPlan) {
+        try {
+          const response = await fetch('/api/stripe/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan: trialPlan, trial: true }),
+          });
+          const data = await response.json();
+          if (data.url) {
+            window.location.href = data.url;
+            return;
+          }
+        } catch (error) {
+          console.error('Error starting trial:', error);
+          // Fall through to dashboard redirect
+        }
       }
 
       // Use window.location for a hard redirect to ensure session is read
@@ -286,6 +321,20 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p style={{ color: '#4A5D73' }}>Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
 
