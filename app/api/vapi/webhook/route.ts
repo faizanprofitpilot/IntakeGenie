@@ -137,17 +137,26 @@ export async function POST(req: NextRequest) {
 
     console.log('[Vapi Webhook] Event:', event);
     console.log('[Vapi Webhook] Conversation ID:', conversation_id);
-    console.log('[Vapi Webhook] Phone Number:', actualPhoneNumber);
-    console.log('[Vapi Webhook] Phone Number ID:', actualPhoneNumberId);
+    console.log('[Vapi Webhook] Phone Number (caller):', actualPhoneNumber);
+    console.log('[Vapi Webhook] Phone Number ID (Vapi number):', actualPhoneNumberId);
     console.log('[Vapi Webhook] Metadata:', JSON.stringify(metadata, null, 2));
     console.log('[Vapi Webhook] Full body keys:', Object.keys(body));
-    console.log('[Vapi Webhook] Full body:', JSON.stringify(body, null, 2));
+    console.log('[Vapi Webhook] ========== FULL WEBHOOK BODY ==========');
+    console.log(JSON.stringify(body, null, 2));
+    console.log('[Vapi Webhook] =========================================');
 
     const supabase = createServiceClient();
 
     // Look up firm by metadata first (most reliable)
     // Extract from nested message.assistant.metadata if in new format
     let firmId = metadata?.firmId || body.metadata?.firmId || body.message?.assistant?.metadata?.firmId;
+    
+    console.log('[Vapi Webhook] Initial firmId from metadata:', firmId);
+    console.log('[Vapi Webhook] Metadata sources checked:', {
+      metadata_firmId: metadata?.firmId,
+      body_metadata_firmId: body.metadata?.firmId,
+      message_assistant_metadata_firmId: body.message?.assistant?.metadata?.firmId,
+    });
     
     if (!firmId) {
       // Try to extract from phoneNumber object if it exists
