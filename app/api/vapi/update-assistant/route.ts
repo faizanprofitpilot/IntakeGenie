@@ -49,11 +49,9 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get app URL for webhook (production only)
-    // Prefer VERCEL_URL (automatically set by Vercel) or NEXT_PUBLIC_APP_URL
-    let appUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXT_PUBLIC_APP_URL;
+    // Get app URL for webhook - prefer production domain over Vercel preview URL
+    let appUrl = process.env.NEXT_PUBLIC_APP_URL 
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
     
     if (!appUrl) {
       return NextResponse.json({ 
