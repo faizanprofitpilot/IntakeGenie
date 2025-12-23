@@ -87,15 +87,15 @@ export async function POST(req: NextRequest) {
     // Step 1: Create or get Vapi assistant
     console.log('[Telephony Generate] Step 1: Creating/getting Vapi assistant...');
     let assistantId = firm.vapi_assistant_id;
+    const agentConfig = buildVapiAgent(
+      firm.firm_name || 'the firm',
+      firm.ai_greeting_custom,
+      firm.ai_tone,
+      firm.ai_knowledge_base
+    );
 
     if (!assistantId) {
-      const agentConfig = buildVapiAgent(
-        firm.firm_name || 'the firm',
-        firm.ai_greeting_custom,
-        firm.ai_tone,
-        firm.ai_knowledge_base
-      );
-
+      // Create new assistant
       const assistantPayload: any = {
         name: `${firm.firm_name} Intake Assistant`,
         model: agentConfig.model,
@@ -133,7 +133,30 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
     } else {
-      console.log('[Telephony Generate] Using existing assistant:', assistantId);
+      // Update existing assistant to ensure webhook URL is correct
+      console.log('[Telephony Generate] Updating existing assistant webhook URL:', assistantId);
+      try {
+        const updatePayload: any = {
+          server: {
+            url: webhookUrl,
+          },
+          serverMessages: [
+            'status-update',
+            'end-of-call-report',
+            'function-call',
+            'transcript',
+          ],
+          metadata: {
+            firmId: firmId,
+          },
+        };
+        
+        await vapi.patch(`/assistant/${assistantId}`, updatePayload);
+        console.log('[Telephony Generate] Assistant webhook URL updated successfully');
+      } catch (vapiError: any) {
+        console.warn('[Telephony Generate] Could not update assistant webhook (may not be critical):', vapiError?.response?.data || vapiError?.message);
+        // Continue - assistant might still work
+      }
     }
 
     // Step 2: Purchase Twilio phone number
