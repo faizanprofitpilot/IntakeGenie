@@ -377,6 +377,19 @@ async function finalizeCallRecord(
 
   // Send email if we acquired the lock earlier
   if (shouldSendEmail) {
+    // Get firm from currentCall to ensure we have the latest data
+    const currentFirm = currentCall.firms as any;
+    if (!currentFirm || !currentFirm.notify_emails || currentFirm.notify_emails.length === 0) {
+      console.log('[Finalize Call] No email addresses configured, skipping email send');
+      // Mark as emailed since there's nothing to send
+      await supabase
+        .from('calls')
+        // @ts-ignore
+        .update({ status: 'emailed' })
+        .eq('id', call.id);
+      return;
+    }
+    
     // Get the most up-to-date recording URL from the database
     const finalRecordingUrl = recordingUrl || currentCall.recording_url || call.recording_url || null;
     
@@ -387,7 +400,7 @@ async function finalizeCallRecord(
     
     try {
       await sendIntakeEmail(
-        firm.notify_emails,
+        currentFirm.notify_emails,
         intake,
         summary,
         transcript || null,
@@ -405,7 +418,7 @@ async function finalizeCallRecord(
       console.log('[Finalize Call] Email sent successfully for call:', call.id);
     } catch (error) {
       console.error('[Intake Processor] Email sending failed:', error);
-      // Reset status on error so it can be retried
+      // Reset status on error so it can be retried - only if still in 'sending_email' state
       await supabase
         .from('calls')
         // @ts-ignore
@@ -413,10 +426,11 @@ async function finalizeCallRecord(
           status: 'error',
           error_message: `Email failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         })
-        .eq('id', call.id);
+        .eq('id', call.id)
+        .eq('status', 'sending_email'); // Only update if still in 'sending_email' state
     }
-  } else {
-    // No email addresses configured - still mark as emailed
+  } else if (!firm || !firm.notify_emails || firm.notify_emails.length === 0) {
+    // No email addresses configured - mark as emailed (no email to send)
     await supabase
       .from('calls')
       // @ts-ignore
