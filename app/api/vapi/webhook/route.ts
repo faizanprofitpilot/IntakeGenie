@@ -97,25 +97,45 @@ export async function POST(req: NextRequest) {
       
       // Extract recording URL from various locations
       // According to Vapi docs: https://docs.vapi.ai/assistants/call-recording
-      // Recording is in artifact.recording - can be a string (URL) or object with url property
-      // Check message.artifact.recording first (primary location)
-      if (message.artifact?.recording) {
-        recordingUrl = typeof message.artifact.recording === 'string' 
-          ? message.artifact.recording 
-          : message.artifact.recording.url || message.artifact.recording.recordingUrl;
-      } 
-      // Also check call.artifact.recording (webhook might have call object with artifact)
+      // Vapi provides recordings in multiple formats:
+      // 1. artifact.recordingUrl (string URL) - mono recording
+      // 2. artifact.recording.stereoUrl (string URL) - stereo recording
+      // 3. artifact.recording.mono.combinedUrl (string URL) - mono recording
+      // 4. artifact.recording (can be string or object)
+      
+      // First check for recordingUrl (direct string URL - easiest to use)
+      if (message.artifact?.recordingUrl) {
+        recordingUrl = message.artifact.recordingUrl;
+      }
+      // Also check call.artifact.recordingUrl (webhook might have call object with artifact)
+      else if (message.call?.artifact?.recordingUrl) {
+        recordingUrl = message.call.artifact.recordingUrl;
+      }
+      // Check artifact.recording (can be string URL or object)
+      else if (message.artifact?.recording) {
+        if (typeof message.artifact.recording === 'string') {
+          recordingUrl = message.artifact.recording;
+        } else {
+          // Object format: check stereoUrl, mono.combinedUrl, or url properties
+          recordingUrl = message.artifact.recording.stereoUrl 
+            || message.artifact.recording.mono?.combinedUrl
+            || message.artifact.recording.url 
+            || message.artifact.recording.recordingUrl;
+        }
+      }
+      // Check call.artifact.recording (webhook might have call object with artifact)
       else if (message.call?.artifact?.recording) {
-        recordingUrl = typeof message.call.artifact.recording === 'string'
-          ? message.call.artifact.recording
-          : message.call.artifact.recording.url || message.call.artifact.recording.recordingUrl;
+        if (typeof message.call.artifact.recording === 'string') {
+          recordingUrl = message.call.artifact.recording;
+        } else {
+          recordingUrl = message.call.artifact.recording.stereoUrl
+            || message.call.artifact.recording.mono?.combinedUrl
+            || message.call.artifact.recording.url
+            || message.call.artifact.recording.recordingUrl;
+        }
       }
       // Fallback to other locations
-      else if (message.artifact?.recordingUrl) {
-        recordingUrl = message.artifact.recordingUrl;
-      } else if (message.call?.artifact?.recordingUrl) {
-        recordingUrl = message.call.artifact.recordingUrl;
-      } else if (message.recordingUrl) {
+      else if (message.recordingUrl) {
         recordingUrl = message.recordingUrl;
       } else if (message.recording?.url) {
         recordingUrl = message.recording.url;
@@ -541,15 +561,31 @@ export async function POST(req: NextRequest) {
             }
             
             // Extract recording URL from API response
-            // According to Vapi docs, recording is in artifact.recording
+            // Vapi provides recordings in multiple formats:
+            // 1. artifact.recordingUrl (string URL) - mono recording (preferred)
+            // 2. artifact.recording.stereoUrl (string URL) - stereo recording
+            // 3. artifact.recording.mono.combinedUrl (string URL) - mono recording
+            // 4. artifact.recording (can be string or object)
             if (!finalRecordingUrl) {
-              if (callData.artifact?.recording) {
-                finalRecordingUrl = typeof callData.artifact.recording === 'string'
-                  ? callData.artifact.recording
-                  : callData.artifact.recording.url || callData.artifact.recording.recordingUrl;
-              } else {
+              // First check recordingUrl (direct string - easiest)
+              if (callData.artifact?.recordingUrl) {
+                finalRecordingUrl = callData.artifact.recordingUrl;
+              }
+              // Check artifact.recording (object format)
+              else if (callData.artifact?.recording) {
+                if (typeof callData.artifact.recording === 'string') {
+                  finalRecordingUrl = callData.artifact.recording;
+                } else {
+                  // Object format: check stereoUrl, mono.combinedUrl, or url properties
+                  finalRecordingUrl = callData.artifact.recording.stereoUrl
+                    || callData.artifact.recording.mono?.combinedUrl
+                    || callData.artifact.recording.url
+                    || callData.artifact.recording.recordingUrl;
+                }
+              }
+              // Fallback to other locations
+              else {
                 finalRecordingUrl = 
-                  callData.artifact?.recordingUrl ||
                   callData.recordingUrl ||
                   callData.recording?.url ||
                   callData.recording_url ||
