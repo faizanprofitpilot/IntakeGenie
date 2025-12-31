@@ -19,6 +19,9 @@ function extractCallerInfo(
   let phone = intake.callback_number || '';
   let email = intake.email || '';
 
+  console.log('[extractCallerInfo] Initial name from intake.full_name:', name || 'NOT SET');
+  console.log('[extractCallerInfo] Summary title:', summary.title || 'NOT SET');
+
   // Try to extract name from summary bullets if not in intake
   if (!name && summary.summary_bullets) {
     for (const bullet of summary.summary_bullets) {
@@ -44,8 +47,19 @@ function extractCallerInfo(
     const titleMatch = summary.title.match(/[^-]+\s*-\s*([A-Z][a-zA-Z\s]+?)(?:\s*[—\-]|$)/);
     if (titleMatch && titleMatch[1]) {
       name = titleMatch[1].trim();
+      console.log('[extractCallerInfo] Extracted name from title:', name);
+    } else {
+      console.log('[extractCallerInfo] Failed to extract name from title, title:', summary.title);
+      // Try alternative pattern: "Caller - [Name]" or just match after last dash
+      const altMatch = summary.title.match(/(?:Caller\s*[-:]?\s*)?([A-Z][a-zA-Z\s]{2,}?)(?:\s*[—\-]|$)/);
+      if (altMatch && altMatch[1]) {
+        name = altMatch[1].trim();
+        console.log('[extractCallerInfo] Extracted name using alternative pattern:', name);
+      }
     }
   }
+
+  console.log('[extractCallerInfo] Final extracted name:', name || 'NOT SET');
 
   // Try to extract phone from summary bullets if not in intake
   if (!phone && summary.summary_bullets) {

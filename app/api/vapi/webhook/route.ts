@@ -488,6 +488,7 @@ export async function POST(req: NextRequest) {
       let finalStructuredData = structuredData;
       let finalCallerNumber = actualPhoneNumber;
       let finalRecordingUrl = recordingUrl;
+      let finalEndedAt: string | undefined = body.message?.call?.endedAt || body.message?.endedAt || undefined;
       
       if (!finalTranscript || !finalStructuredData || !finalCallerNumber) {
         console.log('[Vapi Webhook] Missing data, fetching from Vapi API...');
@@ -558,6 +559,12 @@ export async function POST(req: NextRequest) {
                 console.log('[Vapi Webhook] Found caller number in API response:', finalCallerNumber);
                 fetchedData = true;
               }
+            }
+            
+            // Extract end time from API response
+            if (!finalEndedAt && callData.endedAt) {
+              finalEndedAt = callData.endedAt;
+              console.log('[Vapi Webhook] Found end time in API response:', finalEndedAt);
             }
             
             // Extract recording URL from API response
@@ -689,6 +696,7 @@ export async function POST(req: NextRequest) {
           firmId: firmId,
           intake: finalStructuredData, // Pass structured data if we fetched it
           recordingUrl: finalRecordingUrl, // Pass recording URL if available
+          endedAt: finalEndedAt, // Pass actual call end time from Vapi
         });
         console.log('[Vapi Webhook] Call finalized successfully');
       } catch (finalizeError: any) {

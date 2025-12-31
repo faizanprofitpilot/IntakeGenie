@@ -127,6 +127,7 @@ export async function finalizeCall({
   firmId,
   intake,
   recordingUrl,
+  endedAt,
 }: {
   conversationId: string;
   transcript?: string;
@@ -134,6 +135,7 @@ export async function finalizeCall({
   firmId?: string;
   intake?: any;
   recordingUrl?: string;
+  endedAt?: string; // Optional: actual call end time from Vapi
 }) {
   const supabase = createServiceClient();
 
@@ -199,7 +201,7 @@ export async function finalizeCall({
       }
       
       // Continue with finalization
-      await finalizeCallRecord(supabase, call, finalIntake, transcript, phoneNumber, recordingUrl);
+      await finalizeCallRecord(supabase, call, finalIntake, transcript, phoneNumber, recordingUrl, endedAt);
     } else {
       console.error('[Finalize Call] Cannot create call - no firmId provided. Conversation ID:', conversationId);
       console.error('[Finalize Call] This means the webhook could not find the firm. Check server logs for firm lookup errors.');
@@ -219,7 +221,8 @@ async function finalizeCallRecord(
   intake: IntakeData,
   transcript?: string,
   phoneNumber?: string,
-  recordingUrl?: string
+  recordingUrl?: string,
+  endedAt?: string // Optional: actual call end time from Vapi
 ) {
   // Early exit if already emailed (quick check)
   if (call.status === 'emailed') {
@@ -229,14 +232,21 @@ async function finalizeCallRecord(
 
   // Update call with transcript, intake data, caller number, recording URL, and end time
   // Use new recording URL if provided (even if empty string), otherwise preserve existing one
+  // Use provided endedAt if available, otherwise use current time (for backwards compatibility)
   const updateData: any = {
     transcript_text: transcript || call.transcript_text || null,
     from_number: phoneNumber || call.from_number || '',
     // Use recordingUrl if it's a non-empty string, otherwise preserve existing
     recording_url: (recordingUrl && recordingUrl.trim()) ? recordingUrl : (call.recording_url || null),
-    ended_at: new Date().toISOString(),
+    ended_at: endedAt || call.ended_at || new Date().toISOString(),
     status: 'summarizing',
   };
+  
+  // Log intake data for debugging name extraction
+  if (intake && Object.keys(intake).length > 0) {
+    console.log('[Finalize Call] Intake data:', JSON.stringify(intake, null, 2));
+    console.log('[Finalize Call] Intake full_name:', intake.full_name || 'NOT SET');
+  }
   
   // Log recording URL update for debugging
   if (recordingUrl) {
@@ -316,25 +326,26 @@ async function finalizeCallRecord(
   // Send email - use atomic UPDATE to prevent race conditions
   const firm = currentCall.firms as any;
   if (firm && firm.notify_emails && firm.notify_emails.length > 0) {
-    // Use atomic UPDATE: only update status to 'sending_email' if it's NOT already 'emailed'
+    // Use atomic UPDATE: only update status to 'sending_email' if it's NOT already 'emailed' or 'sending_email'
     // This prevents duplicate emails in race conditions
-    // If status is already 'emailed', this update will affect 0 rows
+    // Use .neq() to ensure status is not 'emailed' and not 'sending_email'
     const { data: lockResult, error: lockError } = await supabase
       .from('calls')
       // @ts-ignore
       .update({ status: 'sending_email' })
       .eq('id', call.id)
       .neq('status', 'emailed')
+      .neq('status', 'sending_email')
       .select('id, status')
       .maybeSingle();
 
-    // If lockResult is null, the update didn't match any rows (status was already 'emailed')
+    // If lockResult is null, the update didn't match any rows (status was already 'emailed' or 'sending_email')
     // If lockError exists, there was a database error
     if (!lockResult || lockError) {
       if (lockError && lockError.code !== 'PGRST116') { // PGRST116 is "not found" which is expected if already emailed
         console.error('[Finalize Call] Error in atomic lock check:', lockError);
       }
-      console.log('[Finalize Call] Email already sent (atomic check - status was already emailed) for call:', call.id, '- skipping email');
+      console.log('[Finalize Call] Email already sent or being sent (atomic check) for call:', call.id, '- skipping email');
       return;
     }
 
