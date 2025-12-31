@@ -342,10 +342,15 @@ async function finalizeCallRecord(
   let summary: SummaryData;
   try {
     summary = await generateSummary(transcript || 'No transcript available.', intake);
+    // Only update status to 'summarizing' if we're NOT sending email (preserve 'sending_email' status)
+    const summaryUpdateData: any = { summary_json: summary as any };
+    if (!shouldSendEmail) {
+      summaryUpdateData.status = 'summarizing';
+    }
     await supabase
       .from('calls')
       // @ts-ignore
-      .update({ summary_json: summary as any, status: 'summarizing' })
+      .update(summaryUpdateData)
       .eq('id', call.id);
   } catch (error) {
     console.error('[Intake Processor] Summarization error:', error);
@@ -368,10 +373,15 @@ async function finalizeCallRecord(
       urgency_level: (call.urgency as UrgencyLevel) || 'normal',
       follow_up_recommendation: 'Standard follow-up recommended',
     };
+    // Only update status to 'summarizing' if we're NOT sending email (preserve 'sending_email' status)
+    const fallbackUpdateData: any = { summary_json: summary as any };
+    if (!shouldSendEmail) {
+      fallbackUpdateData.status = 'summarizing';
+    }
     await supabase
       .from('calls')
       // @ts-ignore
-      .update({ summary_json: summary as any, status: 'summarizing' })
+      .update(fallbackUpdateData)
       .eq('id', call.id);
   }
 
