@@ -224,6 +224,39 @@ async function finalizeCallRecord(
   recordingUrl?: string,
   endedAt?: string // Optional: actual call end time from Vapi
 ) {
+  // CRITICAL: Do atomic email lock check FIRST before any updates
+  // This prevents duplicate emails in race conditions
+  // Check if we should send email and acquire lock atomically
+  const firm = call.firms as any;
+  let shouldSendEmail = false;
+  
+  if (firm && firm.notify_emails && firm.notify_emails.length > 0) {
+    // Use atomic UPDATE: only update status to 'sending_email' if it's NOT already 'emailed' or 'sending_email'
+    // This prevents duplicate emails in race conditions
+    const { data: lockResult, error: lockError } = await supabase
+      .from('calls')
+      // @ts-ignore
+      .update({ status: 'sending_email' })
+      .eq('id', call.id)
+      .neq('status', 'emailed')
+      .neq('status', 'sending_email')
+      .select('id, status')
+      .maybeSingle();
+
+    // If lockResult is null, the update didn't match any rows (status was already 'emailed' or 'sending_email')
+    // If lockError exists, there was a database error
+    if (!lockResult || lockError) {
+      if (lockError && lockError.code !== 'PGRST116') { // PGRST116 is "not found" which is expected if already emailed
+        console.error('[Finalize Call] Error in atomic lock check:', lockError);
+      }
+      console.log('[Finalize Call] Email already sent or being sent (atomic check) for call:', call.id, '- skipping email');
+      shouldSendEmail = false;
+    } else {
+      shouldSendEmail = true;
+      console.log('[Finalize Call] Acquired email lock for call:', call.id);
+    }
+  }
+
   // Early exit if already emailed (quick check)
   if (call.status === 'emailed') {
     console.log('[Finalize Call] Email already sent for call:', call.id, '- skipping email');
@@ -251,13 +284,14 @@ async function finalizeCallRecord(
     }
   }
   
+  // If we acquired the email lock, keep status as 'sending_email', otherwise set to 'summarizing'
   const updateData: any = {
     transcript_text: transcript || call.transcript_text || null,
     from_number: phoneNumber || call.from_number || '',
     // Use recordingUrl if it's a non-empty string, otherwise preserve existing
     recording_url: (recordingUrl && recordingUrl.trim()) ? recordingUrl : (call.recording_url || null),
     ended_at: finalEndedAt,
-    status: 'summarizing',
+    status: shouldSendEmail ? 'sending_email' : 'summarizing',
   };
   
   // Log intake data for debugging name extraction
@@ -341,32 +375,8 @@ async function finalizeCallRecord(
       .eq('id', call.id);
   }
 
-  // Send email - use atomic UPDATE to prevent race conditions
-  const firm = currentCall.firms as any;
-  if (firm && firm.notify_emails && firm.notify_emails.length > 0) {
-    // Use atomic UPDATE: only update status to 'sending_email' if it's NOT already 'emailed' or 'sending_email'
-    // This prevents duplicate emails in race conditions
-    // Use .neq() to ensure status is not 'emailed' and not 'sending_email'
-    const { data: lockResult, error: lockError } = await supabase
-      .from('calls')
-      // @ts-ignore
-      .update({ status: 'sending_email' })
-      .eq('id', call.id)
-      .neq('status', 'emailed')
-      .neq('status', 'sending_email')
-      .select('id, status')
-      .maybeSingle();
-
-    // If lockResult is null, the update didn't match any rows (status was already 'emailed' or 'sending_email')
-    // If lockError exists, there was a database error
-    if (!lockResult || lockError) {
-      if (lockError && lockError.code !== 'PGRST116') { // PGRST116 is "not found" which is expected if already emailed
-        console.error('[Finalize Call] Error in atomic lock check:', lockError);
-      }
-      console.log('[Finalize Call] Email already sent or being sent (atomic check) for call:', call.id, '- skipping email');
-      return;
-    }
-
+  // Send email if we acquired the lock earlier
+  if (shouldSendEmail) {
     // Get the most up-to-date recording URL from the database
     const finalRecordingUrl = recordingUrl || currentCall.recording_url || call.recording_url || null;
     
