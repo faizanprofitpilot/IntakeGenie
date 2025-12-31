@@ -284,15 +284,20 @@ async function finalizeCallRecord(
     }
   }
   
-  // If we acquired the email lock, keep status as 'sending_email', otherwise set to 'summarizing'
+  // Update call data - don't touch status here, it's already set by atomic lock if sending email
   const updateData: any = {
     transcript_text: transcript || call.transcript_text || null,
     from_number: phoneNumber || call.from_number || '',
     // Use recordingUrl if it's a non-empty string, otherwise preserve existing
     recording_url: (recordingUrl && recordingUrl.trim()) ? recordingUrl : (call.recording_url || null),
     ended_at: finalEndedAt,
-    status: shouldSendEmail ? 'sending_email' : 'summarizing',
   };
+  
+  // Only update status if we're NOT sending email (set to 'summarizing' to indicate processing)
+  // If we're sending email, status is already 'sending_email' from atomic lock - don't overwrite it
+  if (!shouldSendEmail) {
+    updateData.status = 'summarizing';
+  }
   
   // Log intake data for debugging name extraction
   if (intake && Object.keys(intake).length > 0) {
@@ -342,15 +347,11 @@ async function finalizeCallRecord(
   let summary: SummaryData;
   try {
     summary = await generateSummary(transcript || 'No transcript available.', intake);
-    // Only update status to 'summarizing' if we're NOT sending email (preserve 'sending_email' status)
-    const summaryUpdateData: any = { summary_json: summary as any };
-    if (!shouldSendEmail) {
-      summaryUpdateData.status = 'summarizing';
-    }
+    // Update summary - don't touch status (preserve 'sending_email' if we're sending email)
     await supabase
       .from('calls')
       // @ts-ignore
-      .update(summaryUpdateData)
+      .update({ summary_json: summary as any })
       .eq('id', call.id);
   } catch (error) {
     console.error('[Intake Processor] Summarization error:', error);
@@ -373,15 +374,11 @@ async function finalizeCallRecord(
       urgency_level: (call.urgency as UrgencyLevel) || 'normal',
       follow_up_recommendation: 'Standard follow-up recommended',
     };
-    // Only update status to 'summarizing' if we're NOT sending email (preserve 'sending_email' status)
-    const fallbackUpdateData: any = { summary_json: summary as any };
-    if (!shouldSendEmail) {
-      fallbackUpdateData.status = 'summarizing';
-    }
+    // Update fallback summary - don't touch status (preserve 'sending_email' if we're sending email)
     await supabase
       .from('calls')
       // @ts-ignore
-      .update(fallbackUpdateData)
+      .update({ summary_json: summary as any })
       .eq('id', call.id);
   }
 
